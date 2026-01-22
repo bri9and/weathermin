@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+  useUser,
+} from '@clerk/clerk-react'
+import {
   Search,
   MapPin,
   Thermometer,
@@ -28,6 +35,7 @@ import {
   SkipForward,
   Navigation,
   Snowflake,
+  LogIn,
 } from 'lucide-react'
 import { MapContainer, TileLayer, useMap, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -2079,6 +2087,26 @@ export default function App() {
             >
               <RefreshCw className={`w-5 h-5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
+
+            {/* User Auth */}
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-500/20 border border-sky-500/30 hover:bg-sky-500/30 transition-colors text-sky-400">
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-sm font-medium">Sign In</span>
+                </button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: 'w-9 h-9',
+                  }
+                }}
+                afterSignOutUrl="/"
+              />
+            </SignedIn>
           </div>
         </div>
       </header>
