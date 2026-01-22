@@ -2043,10 +2043,7 @@ export default function App() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <img src="/icons/icon-192.png" alt="WeatherMin" className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl shadow-md" />
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white">WeatherMin</h1>
-                <p className="text-xs text-blue-500 font-medium">Your friendly forecast</p>
-              </div>
+              <h1 className="hidden sm:block text-xl font-bold text-slate-800 dark:text-white">WeatherMin</h1>
             </div>
 
             {/* Search */}
@@ -2171,7 +2168,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-12 pb-8">
+      <footer className="mt-12 pb-8 relative">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-slate-400">
           <p className="mb-2">Made with ☀️ for sunny days and ☔ for rainy ones</p>
           <p>
@@ -2194,6 +2191,9 @@ export default function App() {
               Open-Meteo
             </a>
           </p>
+        </div>
+        <div className="fixed bottom-3 left-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
+          v1.0.0
         </div>
       </footer>
     </div>
