@@ -40,6 +40,27 @@ import {
 import { MapContainer, TileLayer, useMap, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
+// Hook to detect user's color scheme preference
+function useColorScheme() {
+  const [isDark, setIsDark] = useState(() =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  )
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e) => setIsDark(e.matches)
+    mediaQuery.addEventListener('change', handler)
+    return () => mediaQuery.removeEventListener('change', handler)
+  }, [])
+
+  return isDark
+}
+
+const MAP_TILES = {
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+}
+
 const DEFAULT_LOCATION = {
   name: 'Cranberry Township, PA',
   lat: 40.6834,
@@ -475,6 +496,7 @@ function MiniRadar({ location }) {
   const [radarFrames, setRadarFrames] = useState([])
   const [currentFrame, setCurrentFrame] = useState(0)
   const [zoomComplete, setZoomComplete] = useState(false)
+  const isDark = useColorScheme()
   const center = useMemo(() => [location.lat, location.lon], [location.lat, location.lon])
   const handleZoomComplete = useCallback(() => setZoomComplete(true), [])
 
@@ -567,7 +589,7 @@ function MiniRadar({ location }) {
           center={center}
           zoom={3}
           className="h-full w-full"
-          style={{ background: '#1e293b' }}
+          style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
           zoomControl={false}
           attributionControl={false}
         >
@@ -577,27 +599,27 @@ function MiniRadar({ location }) {
             endZoom={8}
             onZoomComplete={handleZoomComplete}
           />
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+          <TileLayer url={isDark ? MAP_TILES.dark : MAP_TILES.light} />
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
         {/* Title overlay */}
-        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium text-white z-[1000]">
+        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-[1000] ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
           Live Radar
         </div>
         {/* Time indicator */}
-        <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm text-slate-300 z-[1000] flex items-center gap-2">
+        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-[1000] flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
           <span className={`w-2 h-2 rounded-full ${zoomComplete ? 'bg-red-500 animate-pulse' : 'bg-sky-500 animate-ping'}`}></span>
           {zoomComplete ? (
             <>
               {frameTime}
-              {timeRange && <span className="text-slate-500">({timeRange})</span>}
+              {timeRange && <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>({timeRange})</span>}
             </>
           ) : (
-            <span className="text-sky-400">Zooming in...</span>
+            <span className="text-sky-500">Zooming in...</span>
           )}
         </div>
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800 z-[1000]">
+        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-[1000] ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
           <div
             className="h-full bg-sky-500 transition-all duration-300"
             style={{ width: `${((currentFrame + 1) / radarFrames.length) * 100}%` }}
@@ -1475,6 +1497,7 @@ function RadarTab({ location, onGeolocate, locating }) {
   const [alertsGeoJson, setAlertsGeoJson] = useState(null)
   const [radarOpacity, setRadarOpacity] = useState(0.7)
   const [satelliteOpacity, setSatelliteOpacity] = useState(0.6)
+  const isDark = useColorScheme()
 
   const center = useMemo(() => [location.lat, location.lon], [location.lat, location.lon])
 
@@ -1691,11 +1714,11 @@ function RadarTab({ location, onGeolocate, locating }) {
             center={center}
             zoom={8}
             className="h-full w-full"
-            style={{ background: '#1e293b' }}
+            style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
           >
             <MapUpdater center={center} />
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url={isDark ? MAP_TILES.dark : MAP_TILES.light}
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
             {showSatellite && currentSatelliteUrl && (
