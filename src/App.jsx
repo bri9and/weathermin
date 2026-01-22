@@ -562,7 +562,7 @@ function MiniRadar({ location }) {
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
-      <div className="h-[500px] relative">
+      <div className="h-[375px] relative">
         <MapContainer
           center={center}
           zoom={3}
@@ -1686,7 +1686,7 @@ function RadarTab({ location, onGeolocate, locating }) {
 
       {/* Map */}
       <Card className="p-0 overflow-hidden">
-        <div className="h-[500px] relative">
+        <div className="h-[375px] relative">
           <MapContainer
             center={center}
             zoom={8}
