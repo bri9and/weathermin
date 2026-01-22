@@ -553,8 +553,8 @@ function MiniRadar({ location }) {
   }, [radarFrames])
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="h-[250px] relative">
+    <Card className="p-0 overflow-hidden rounded-xl">
+      <div className="h-[400px] relative">
         <MapContainer
           center={center}
           zoom={3}
@@ -572,7 +572,12 @@ function MiniRadar({ location }) {
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
-        <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-sm px-2 py-1 rounded text-xs text-slate-300 z-[1000] flex items-center gap-2">
+        {/* Title overlay */}
+        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium text-white z-[1000]">
+          Live Radar
+        </div>
+        {/* Time indicator */}
+        <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm text-slate-300 z-[1000] flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${zoomComplete ? 'bg-red-500 animate-pulse' : 'bg-sky-500 animate-ping'}`}></span>
           {zoomComplete ? (
             <>
@@ -584,7 +589,7 @@ function MiniRadar({ location }) {
           )}
         </div>
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800 z-[1000]">
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800 z-[1000]">
           <div
             className="h-full bg-sky-500 transition-all duration-300"
             style={{ width: `${((currentFrame + 1) / radarFrames.length) * 100}%` }}
@@ -604,9 +609,6 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
     <div className="space-y-6">
       {/* Conditions Card */}
       <ConditionsCard modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
-
-      {/* Mini Radar */}
-      <MiniRadar location={location} />
 
       {/* 10-Day Forecast */}
       <div>
@@ -1774,6 +1776,11 @@ export default function App() {
         )}
 
         <AlertBanner alerts={alerts} />
+
+        {/* Radar - Front and Center */}
+        <div className="mb-6">
+          <MiniRadar location={location} />
+        </div>
 
         {modelData && <CurrentConditions data={modelData} location={location} />}
 
