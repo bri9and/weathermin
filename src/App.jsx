@@ -100,7 +100,7 @@ function LoadingSpinner() {
 
 function Card({ children, className = '' }) {
   return (
-    <div className={`bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 ${className}`}>
+    <div className={`bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 shadow-sm ${className}`}>
       {children}
     </div>
   )
@@ -112,8 +112,8 @@ function TabButton({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
         active
-          ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
-          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          ? 'bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30'
+          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
       }`}
     >
       {children}
@@ -229,18 +229,18 @@ function CurrentConditions({ data, location }) {
     <Card className="mb-6">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm mb-1">
             <MapPin className="w-4 h-4" />
             <span>{location.name}</span>
           </div>
-          <div className="text-5xl font-light text-white">
+          <div className="text-5xl font-light text-slate-800 dark:text-white">
             {Math.round(current.temperature_2m)}°
-            <span className="text-2xl text-slate-400">F</span>
+            <span className="text-2xl text-slate-500 dark:text-slate-400">F</span>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-slate-400 text-sm">Feels like</div>
-          <div className="text-2xl text-slate-200">
+          <div className="text-slate-500 dark:text-slate-400 text-sm">Feels like</div>
+          <div className="text-2xl text-slate-700 dark:text-slate-200">
             {Math.round(current.apparent_temperature)}°F
           </div>
         </div>
@@ -248,31 +248,31 @@ function CurrentConditions({ data, location }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="flex items-center gap-2">
-          <Droplets className="w-4 h-4 text-sky-400" />
+          <Droplets className="w-4 h-4 text-sky-500" />
           <div>
             <div className="text-xs text-slate-500">Humidity</div>
-            <div className="text-slate-200">{current.relative_humidity_2m}%</div>
+            <div className="text-slate-700 dark:text-slate-200">{current.relative_humidity_2m}%</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Wind className="w-4 h-4 text-emerald-400" />
+          <Wind className="w-4 h-4 text-emerald-500" />
           <div>
             <div className="text-xs text-slate-500">Wind</div>
-            <div className="text-slate-200">{Math.round(current.wind_speed_10m)} mph</div>
+            <div className="text-slate-700 dark:text-slate-200">{Math.round(current.wind_speed_10m)} mph</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Compass className="w-4 h-4 text-amber-400" />
+          <Compass className="w-4 h-4 text-amber-500" />
           <div>
             <div className="text-xs text-slate-500">Direction</div>
-            <div className="text-slate-200">{current.wind_direction_10m}°</div>
+            <div className="text-slate-700 dark:text-slate-200">{current.wind_direction_10m}°</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Gauge className="w-4 h-4 text-rose-400" />
+          <Gauge className="w-4 h-4 text-rose-500" />
           <div>
             <div className="text-xs text-slate-500">Pressure</div>
-            <div className="text-slate-200">{Math.round(current.surface_pressure)} mb</div>
+            <div className="text-slate-700 dark:text-slate-200">{Math.round(current.surface_pressure)} mb</div>
           </div>
         </div>
       </div>
@@ -359,67 +359,67 @@ function ConditionsCard({ modelData, dailyForecast, airQuality }) {
         </div>
 
         {/* UV Index */}
-        <div className="p-3 rounded-lg bg-slate-700/30">
-          <div className="text-xs text-slate-400 mb-1">UV Index</div>
+        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">UV Index</div>
           <div className={`text-2xl font-light ${uvLevel.color}`}>{uvIndex.toFixed(1)}</div>
           <div className={`text-sm ${uvLevel.color}`}>{uvLevel.label}</div>
         </div>
 
         {/* Humidity */}
-        <div className="p-3 rounded-lg bg-slate-700/30">
-          <div className="flex items-center gap-1 text-xs text-slate-400 mb-1">
+        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mb-1">
             <Droplets className="w-3 h-3" />
             Humidity
           </div>
-          <div className="text-2xl font-light text-slate-200">{current.relative_humidity_2m}%</div>
-          <div className="text-sm text-slate-400">Dew {Math.round(dewPoint)}°F</div>
+          <div className="text-2xl font-light text-slate-700 dark:text-slate-200">{current.relative_humidity_2m}%</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">Dew {Math.round(dewPoint)}°F</div>
         </div>
 
         {/* Visibility */}
-        <div className="p-3 rounded-lg bg-slate-700/30">
-          <div className="flex items-center gap-1 text-xs text-slate-400 mb-1">
+        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mb-1">
             <Eye className="w-3 h-3" />
             Visibility
           </div>
-          <div className="text-2xl font-light text-slate-200">{visibilityMiles}</div>
-          <div className="text-sm text-slate-400">miles</div>
+          <div className="text-2xl font-light text-slate-700 dark:text-slate-200">{visibilityMiles}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">miles</div>
         </div>
 
         {/* Sunrise */}
-        <div className="p-3 rounded-lg bg-slate-700/30">
-          <div className="text-xs text-slate-400 mb-1">Sunrise</div>
-          <div className="text-2xl font-light text-amber-400">{sunriseTime}</div>
-          <div className="text-sm text-slate-400">AM</div>
+        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sunrise</div>
+          <div className="text-2xl font-light text-amber-500 dark:text-amber-400">{sunriseTime}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">AM</div>
         </div>
 
         {/* Sunset */}
-        <div className="p-3 rounded-lg bg-slate-700/30">
-          <div className="text-xs text-slate-400 mb-1">Sunset</div>
-          <div className="text-2xl font-light text-orange-400">{sunsetTime}</div>
-          <div className="text-sm text-slate-400">PM</div>
+        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Sunset</div>
+          <div className="text-2xl font-light text-orange-500 dark:text-orange-400">{sunsetTime}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">PM</div>
         </div>
       </div>
 
       {/* Air Quality Details */}
       {aqi && (
-        <div className="mt-4 pt-4 border-t border-slate-700/50">
-          <div className="text-xs text-slate-400 mb-2">Air Quality Details</div>
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">Air Quality Details</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
               <span className="text-slate-500">PM2.5</span>
-              <span className="ml-2 text-slate-300">{aqi.pm2_5?.toFixed(1)} µg/m³</span>
+              <span className="ml-2 text-slate-700 dark:text-slate-300">{aqi.pm2_5?.toFixed(1)} µg/m³</span>
             </div>
             <div>
               <span className="text-slate-500">PM10</span>
-              <span className="ml-2 text-slate-300">{aqi.pm10?.toFixed(1)} µg/m³</span>
+              <span className="ml-2 text-slate-700 dark:text-slate-300">{aqi.pm10?.toFixed(1)} µg/m³</span>
             </div>
             <div>
               <span className="text-slate-500">Ozone</span>
-              <span className="ml-2 text-slate-300">{aqi.ozone?.toFixed(1)} µg/m³</span>
+              <span className="ml-2 text-slate-700 dark:text-slate-300">{aqi.ozone?.toFixed(1)} µg/m³</span>
             </div>
             <div>
               <span className="text-slate-500">NO₂</span>
-              <span className="ml-2 text-slate-300">{aqi.nitrogen_dioxide?.toFixed(1)} µg/m³</span>
+              <span className="ml-2 text-slate-700 dark:text-slate-300">{aqi.nitrogen_dioxide?.toFixed(1)} µg/m³</span>
             </div>
           </div>
         </div>
@@ -562,7 +562,7 @@ function MiniRadar({ location }) {
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
-      <div className="h-[400px] relative">
+      <div className="h-[500px] relative">
         <MapContainer
           center={center}
           zoom={3}
@@ -735,7 +735,7 @@ function DailyGreeting({ modelData, dailyForecast, airQuality }) {
   if (!greeting) return null
 
   return (
-    <Card className="mb-6 bg-gradient-to-r from-sky-500/10 to-blue-500/10 border-sky-500/20">
+    <Card className="mb-6 bg-gradient-to-r from-amber-100 to-sky-100 dark:from-sky-500/10 dark:to-blue-500/10 border-amber-200 dark:border-sky-500/20">
       <div className="flex items-start gap-4">
         <div className="text-4xl">
           {greeting.tips.some(t => t.includes('umbrella')) ? '🌂' :
@@ -749,17 +749,17 @@ function DailyGreeting({ modelData, dailyForecast, airQuality }) {
            greeting.mainMessage.includes('hot') ? '🥵' : '🌤️'}
         </div>
         <div className="flex-1">
-          <h2 className="text-xl font-semibold text-white mb-1">
+          <h2 className="text-xl font-semibold text-slate-800 dark:text-white mb-1">
             {greeting.timeGreeting}!
           </h2>
-          <p className="text-slate-300 mb-2">
+          <p className="text-slate-600 dark:text-slate-300 mb-2">
             {greeting.mainMessage}. {greeting.tempRange}.
           </p>
           {greeting.tips.length > 0 && (
             <ul className="space-y-1">
               {greeting.tips.map((tip, i) => (
-                <li key={i} className="text-sm text-sky-300 flex items-center gap-2">
-                  <span className="text-sky-400">→</span> {tip}
+                <li key={i} className="text-sm text-sky-600 dark:text-sky-300 flex items-center gap-2">
+                  <span className="text-sky-500 dark:text-sky-400">→</span> {tip}
                 </li>
               ))}
             </ul>
@@ -770,47 +770,45 @@ function DailyGreeting({ modelData, dailyForecast, airQuality }) {
   )
 }
 
-// Compact 10-Day Forecast Strip
+// 10-Day Forecast Strip - Full Width with Large Icons
 function TenDayStrip({ dailyForecast }) {
   const daily = dailyForecast.daily
 
   return (
     <Card className="mb-6 p-0 overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-700/50">
-        <h3 className="text-slate-200 font-medium flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-sky-400" />
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700/50">
+        <h3 className="text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-sky-500" />
           10-Day Forecast
         </h3>
       </div>
-      <div className="overflow-x-auto">
-        <div className="flex" style={{ minWidth: 'max-content' }}>
-          {daily.time.slice(0, 10).map((date, i) => {
-            const weatherCode = daily.weather_code[i]
-            const Icon = getWeatherIconFromCode(weatherCode)
-            const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
-            const snowfall = daily.snowfall_sum[i] / 2.54
-            const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
-            const dayNum = new Date(date).getDate()
+      <div className="grid grid-cols-5 sm:grid-cols-10">
+        {daily.time.slice(0, 10).map((date, i) => {
+          const weatherCode = daily.weather_code[i]
+          const Icon = getWeatherIconFromCode(weatherCode)
+          const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+          const snowfall = daily.snowfall_sum[i] / 2.54
+          const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
+          const dayNum = new Date(date).getDate()
 
-            return (
-              <div
-                key={i}
-                className={`flex flex-col items-center py-4 px-4 border-r border-slate-700/30 last:border-r-0 ${
-                  snowfall > 0 ? 'bg-sky-500/5' : ''
-                }`}
-              >
-                <div className="text-xs text-slate-400 font-medium">{dayName}</div>
-                <div className="text-lg text-slate-300">{dayNum}</div>
-                <Icon className={`w-8 h-8 my-2 ${isSnowy ? 'text-sky-300' : 'text-amber-400'}`} />
-                <div className="text-white font-medium">{Math.round(daily.temperature_2m_max[i])}°</div>
-                <div className="text-slate-500 text-sm">{Math.round(daily.temperature_2m_min[i])}°</div>
-                {snowfall > 0 && (
-                  <div className="text-xs text-sky-300 mt-1">{snowfall.toFixed(1)}"</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+          return (
+            <div
+              key={i}
+              className={`flex flex-col items-center py-5 px-2 border-r border-slate-200 dark:border-slate-700/30 last:border-r-0 ${
+                snowfall > 0 ? 'bg-sky-100 dark:bg-sky-500/10' : ''
+              } ${i === 0 ? 'bg-amber-50 dark:bg-amber-500/10' : ''}`}
+            >
+              <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">{dayName}</div>
+              <div className="text-xl text-slate-700 dark:text-slate-300 font-medium">{dayNum}</div>
+              <Icon className={`w-12 h-12 my-3 ${isSnowy ? 'text-sky-400' : 'text-amber-500'}`} />
+              <div className="text-xl text-slate-800 dark:text-white font-semibold">{Math.round(daily.temperature_2m_max[i])}°</div>
+              <div className="text-slate-500 dark:text-slate-500">{Math.round(daily.temperature_2m_min[i])}°</div>
+              {snowfall > 0 && (
+                <div className="text-sm text-sky-500 dark:text-sky-300 mt-1 font-medium">{snowfall.toFixed(1)}"</div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </Card>
   )
@@ -876,8 +874,8 @@ function CalendarMonth({ dailyForecast }) {
 
   return (
     <Card className="mb-6">
-      <h3 className="text-slate-200 font-medium mb-4 flex items-center gap-2">
-        <Calendar className="w-4 h-4 text-sky-400" />
+      <h3 className="text-slate-700 dark:text-slate-200 font-medium mb-4 flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-sky-500" />
         {monthName}
       </h3>
 
@@ -899,26 +897,32 @@ function CalendarMonth({ dailyForecast }) {
 
           const { day, forecast } = cell
           const isToday = day === todayDate
+          const isPast = day < todayDate
           const Icon = forecast ? getWeatherIconFromCode(forecast.weatherCode) : null
           const isSnowy = forecast && [71, 73, 75, 77, 85, 86].includes(forecast.weatherCode)
+
+          // Hide past days
+          if (isPast) {
+            return <div key={i} className="aspect-square" />
+          }
 
           return (
             <div
               key={i}
               className={`aspect-square rounded-lg p-1 flex flex-col items-center justify-center text-center ${
-                isToday ? 'bg-sky-500/20 border border-sky-500/50' : ''
-              } ${forecast?.snow > 0 ? 'bg-sky-500/10' : ''}`}
+                isToday ? 'bg-sky-100 dark:bg-sky-500/20 border border-sky-400 dark:border-sky-500/50' : ''
+              } ${forecast?.snow > 0 && !isToday ? 'bg-sky-50 dark:bg-sky-500/10' : ''}`}
             >
-              <div className={`text-xs ${isToday ? 'text-sky-400 font-bold' : 'text-slate-400'}`}>
+              <div className={`text-xs ${isToday ? 'text-sky-600 dark:text-sky-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
                 {day}
               </div>
               {Icon && (
-                <Icon className={`w-4 h-4 my-0.5 ${isSnowy ? 'text-sky-300' : 'text-amber-400'}`} />
+                <Icon className={`w-4 h-4 my-0.5 ${isSnowy ? 'text-sky-400 dark:text-sky-300' : 'text-amber-500 dark:text-amber-400'}`} />
               )}
               {forecast && (
                 <div className="text-xs">
-                  <span className="text-white">{forecast.high}°</span>
-                  <span className="text-slate-500">/{forecast.low}°</span>
+                  <span className="text-slate-800 dark:text-white">{forecast.high}°</span>
+                  <span className="text-slate-400 dark:text-slate-500">/{forecast.low}°</span>
                 </div>
               )}
             </div>
@@ -941,8 +945,8 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
 
       {/* 10-Day Forecast */}
       <div>
-        <h3 className="text-slate-200 font-medium mb-3 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-sky-400" />
+        <h3 className="text-slate-700 dark:text-slate-200 font-medium mb-3 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-sky-500" />
           10-Day Forecast
         </h3>
         <div className="grid gap-2">
@@ -956,37 +960,37 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
             const fullDate = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
             return (
-              <Card key={i} className={`flex items-center gap-3 ${snowfall > 0 ? 'border-sky-500/30 bg-sky-500/5' : ''}`}>
+              <Card key={i} className={`flex items-center gap-3 ${snowfall > 0 ? 'border-sky-400 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/5' : ''}`}>
                 <div className="w-24 shrink-0">
-                  <div className="text-slate-200 font-medium">{dayName}</div>
+                  <div className="text-slate-700 dark:text-slate-200 font-medium">{dayName}</div>
                   <div className="text-xs text-slate-500">{fullDate}</div>
                 </div>
-                <Icon className={`w-7 h-7 shrink-0 ${isSnowy ? 'text-sky-300' : 'text-amber-400'}`} />
+                <Icon className={`w-7 h-7 shrink-0 ${isSnowy ? 'text-sky-400 dark:text-sky-300' : 'text-amber-500 dark:text-amber-400'}`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-light text-white">{Math.round(daily.temperature_2m_max[i])}°</span>
-                    <span className="text-slate-500">/</span>
-                    <span className="text-slate-400">{Math.round(daily.temperature_2m_min[i])}°</span>
+                    <span className="text-xl font-light text-slate-800 dark:text-white">{Math.round(daily.temperature_2m_max[i])}°</span>
+                    <span className="text-slate-400 dark:text-slate-500">/</span>
+                    <span className="text-slate-500 dark:text-slate-400">{Math.round(daily.temperature_2m_min[i])}°</span>
                   </div>
-                  <p className="text-sm text-slate-400 truncate">{getWeatherDescription(weatherCode)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{getWeatherDescription(weatherCode)}</p>
                 </div>
                 {/* Snow indicator */}
                 {snowfall > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-sky-500/20 rounded-lg shrink-0">
-                    <Snowflake className="w-4 h-4 text-sky-300" />
-                    <span className="text-sky-200 font-medium">{snowfall.toFixed(1)}"</span>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-sky-100 dark:bg-sky-500/20 rounded-lg shrink-0">
+                    <Snowflake className="w-4 h-4 text-sky-500 dark:text-sky-300" />
+                    <span className="text-sky-600 dark:text-sky-200 font-medium">{snowfall.toFixed(1)}"</span>
                   </div>
                 )}
                 {/* Precip probability */}
                 {daily.precipitation_probability_max[i] > 0 && !snowfall && (
-                  <div className="flex items-center gap-1 text-slate-400 shrink-0">
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 shrink-0">
                     <Droplets className="w-4 h-4" />
                     <span className="text-sm">{daily.precipitation_probability_max[i]}%</span>
                   </div>
                 )}
                 {/* Wind */}
                 <div className="text-right shrink-0 hidden sm:block">
-                  <div className="flex items-center gap-1 text-slate-400">
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                     <Wind className="w-4 h-4" />
                     <span className="text-sm">{Math.round(daily.wind_speed_10m_max[i])} mph</span>
                   </div>
@@ -1004,8 +1008,8 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
 
       {/* Snow Summary */}
       {daily.snowfall_sum.some(s => s > 0) && (
-        <Card className="border-sky-500/30 bg-sky-500/5">
-          <h3 className="text-sky-200 font-medium mb-2 flex items-center gap-2">
+        <Card className="border-sky-400 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/5">
+          <h3 className="text-sky-600 dark:text-sky-200 font-medium mb-2 flex items-center gap-2">
             <Snowflake className="w-5 h-5" />
             Snow Forecast
           </h3>
@@ -1018,14 +1022,14 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
                 new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
               return (
                 <div key={i} className="text-center">
-                  <div className="text-slate-400 text-sm">{dayName}</div>
-                  <div className="text-2xl font-light text-sky-200">{snow.toFixed(1)}"</div>
+                  <div className="text-slate-500 dark:text-slate-400 text-sm">{dayName}</div>
+                  <div className="text-2xl font-light text-sky-600 dark:text-sky-200">{snow.toFixed(1)}"</div>
                 </div>
               )
             }).filter(Boolean)}
             <div className="text-center">
-              <div className="text-slate-400 text-sm">10-Day Total</div>
-              <div className="text-2xl font-light text-sky-200">
+              <div className="text-slate-500 dark:text-slate-400 text-sm">10-Day Total</div>
+              <div className="text-2xl font-light text-sky-600 dark:text-sky-200">
                 {(daily.snowfall_sum.reduce((a, b) => a + b, 0) / 2.54).toFixed(1)}"
               </div>
             </div>
@@ -2032,14 +2036,14 @@ export default function App() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-700/50">
+      <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700/50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img src="/icons/icon-192.png" alt="WeatherMin" className="w-10 h-10 rounded-xl" />
               <div>
-                <h1 className="text-xl font-semibold text-white">WeatherMin</h1>
-                <p className="text-xs text-slate-400">v1.0.0</p>
+                <h1 className="text-xl font-semibold text-slate-800 dark:text-white">WeatherMin</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">v1.0.0</p>
               </div>
             </div>
 
@@ -2056,19 +2060,19 @@ export default function App() {
                 onFocus={() => searchResults.length > 0 && setShowResults(true)}
                 onBlur={() => setTimeout(() => setShowResults(false), 200)}
                 placeholder="Search location..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50"
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50"
               />
               {showResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl overflow-hidden">
                   {searchResults.map((result, i) => (
                     <button
                       key={i}
                       onClick={() => selectLocation(result)}
-                      className="w-full px-4 py-3 text-left hover:bg-slate-700/50 flex items-center gap-3"
+                      className="w-full px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center gap-3"
                     >
                       <MapPin className="w-4 h-4 text-slate-400" />
                       <div>
-                        <div className="text-slate-200">{result.name}</div>
+                        <div className="text-slate-700 dark:text-slate-200">{result.name}</div>
                         <div className="text-xs text-slate-500">
                           {result.admin1 && `${result.admin1}, `}
                           {result.country}
@@ -2082,10 +2086,10 @@ export default function App() {
 
             <button
               onClick={() => fetchWeatherData(location)}
-              className="p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50 transition-colors"
+              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-colors"
               title="Refresh data"
             >
-              <RefreshCw className={`w-5 h-5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-5 h-5 text-slate-500 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
             {/* User Auth */}
@@ -2122,8 +2126,6 @@ export default function App() {
           </Card>
         )}
 
-        <AlertBanner alerts={alerts} />
-
         {/* Friendly Daily Greeting */}
         <DailyGreeting modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
 
@@ -2131,6 +2133,9 @@ export default function App() {
         <div className="mb-6">
           <MiniRadar location={location} />
         </div>
+
+        {/* Weather Alerts - Below Radar */}
+        <AlertBanner alerts={alerts} />
 
         {/* 10-Day Forecast Strip */}
         {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
@@ -2164,7 +2169,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700/50 mt-12">
+      <footer className="border-t border-slate-200 dark:border-slate-700/50 mt-12">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-slate-500">
           <p>Data from NWS (api.weather.gov) and Open-Meteo (GFS/HRRR)</p>
           <p className="mt-1">
@@ -2172,7 +2177,7 @@ export default function App() {
               href="https://www.weather.gov/documentation/services-web-api"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-400 hover:underline"
+              className="text-sky-500 hover:underline"
             >
               NWS API Docs
             </a>
@@ -2181,7 +2186,7 @@ export default function App() {
               href="https://open-meteo.com/en/docs"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-400 hover:underline"
+              className="text-sky-500 hover:underline"
             >
               Open-Meteo Docs
             </a>

@@ -3,44 +3,56 @@
 @theme {
   --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-  --color-slate-950: #0a0f1a;
-  --color-slate-900: #0f172a;
-  --color-slate-800: #1e293b;
-  --color-slate-700: #334155;
-  --color-slate-600: #475569;
-  --color-slate-500: #64748b;
-  --color-slate-400: #94a3b8;
-  --color-slate-300: #cbd5e1;
-
-  --color-sky-500: #0ea5e9;
-  --color-sky-400: #38bdf8;
-  --color-sky-300: #7dd3fc;
-
-  --color-amber-500: #f59e0b;
-  --color-amber-400: #fbbf24;
-
-  --color-rose-500: #f43f5e;
-  --color-rose-400: #fb7185;
-
-  --color-emerald-500: #10b981;
-  --color-emerald-400: #34d399;
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* Light theme (default) */
+:root {
+  --bg-primary: #f0f9ff;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.9);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --accent: #0ea5e9;
+  --accent-light: #bae6fd;
+  --sun-color: #fbbf24;
+  color-scheme: light;
+}
+
+/* Dark theme (when user prefers) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #0a0f1a;
+    --bg-secondary: #0f172a;
+    --bg-card: #1e293b;
+    --bg-header: rgba(15, 23, 42, 0.9);
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+    --accent: #38bdf8;
+    --accent-light: #0c4a6e;
+    --sun-color: #fbbf24;
+    color-scheme: dark;
+  }
+}
+
 html {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 body {
   margin: 0;
   font-family: var(--font-family-sans);
-  background: linear-gradient(180deg, #0a0f1a 0%, #0f172a 50%, #1e293b 100%);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   min-height: 100vh;
-  color: #e2e8f0;
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -63,3 +75,13 @@ body {
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+/* Custom utility classes for theming */
+.bg-theme-primary { background-color: var(--bg-primary); }
+.bg-theme-secondary { background-color: var(--bg-secondary); }
+.bg-theme-card { background-color: var(--bg-card); }
+.bg-theme-header { background-color: var(--bg-header); }
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-muted { color: var(--text-muted); }
+.border-theme { border-color: var(--border-color); }
