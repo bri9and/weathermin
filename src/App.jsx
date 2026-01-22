@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Search,
   MapPin,
@@ -420,9 +420,43 @@ function ConditionsCard({ modelData, dailyForecast, airQuality }) {
   )
 }
 
+// Animated zoom component for fly-in effect
+function ZoomAnimator({ center, startZoom, endZoom, onZoomComplete }) {
+  const map = useMap()
+  const hasAnimated = useRef(false)
+
+  useEffect(() => {
+    if (hasAnimated.current) return
+    hasAnimated.current = true
+
+    // Start at wide zoom
+    map.setView(center, startZoom, { animate: false })
+
+    // Delay then fly to target
+    const timeout = setTimeout(() => {
+      map.flyTo(center, endZoom, {
+        duration: 2.5,
+        easeLinearity: 0.25,
+      })
+
+      // Notify when zoom animation completes
+      const zoomTimeout = setTimeout(() => {
+        onZoomComplete?.()
+      }, 2700) // Slightly after flyTo duration
+
+      return () => clearTimeout(zoomTimeout)
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [])
+
+  return null
+}
+
 function MiniRadar({ location }) {
   const [radarFrames, setRadarFrames] = useState([])
   const [currentFrame, setCurrentFrame] = useState(0)
+  const [zoomComplete, setZoomComplete] = useState(false)
   const center = useMemo(() => [location.lat, location.lon], [location.lat, location.lon])
 
   // Fetch radar frames with local caching for extended history (up to 4 hours)
@@ -476,14 +510,14 @@ function MiniRadar({ location }) {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-play animation (slower for better viewing)
+  // Auto-play animation (only starts after zoom-in completes)
   useEffect(() => {
-    if (radarFrames.length === 0) return
+    if (radarFrames.length === 0 || !zoomComplete) return
     const interval = setInterval(() => {
       setCurrentFrame((prev) => (prev + 1) % radarFrames.length)
     }, 1500) // Slower animation
     return () => clearInterval(interval)
-  }, [radarFrames.length])
+  }, [radarFrames.length, zoomComplete])
 
   const currentRadarUrl = radarFrames[currentFrame]
     ? `https://tilecache.rainviewer.com${radarFrames[currentFrame].path}/256/{z}/{x}/{y}/4/1_1.png`
@@ -512,20 +546,31 @@ function MiniRadar({ location }) {
       <div className="h-[250px] relative">
         <MapContainer
           center={center}
-          zoom={7}
+          zoom={3}
           className="h-full w-full"
           style={{ background: '#1e293b' }}
           zoomControl={false}
           attributionControl={false}
         >
-          <MapUpdater center={center} />
+          <ZoomAnimator
+            center={center}
+            startZoom={3}
+            endZoom={7}
+            onZoomComplete={() => setZoomComplete(true)}
+          />
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
         <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-sm px-2 py-1 rounded text-xs text-slate-300 z-[1000] flex items-center gap-2">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-          {frameTime}
-          {timeRange && <span className="text-slate-500">({timeRange})</span>}
+          <span className={`w-2 h-2 rounded-full ${zoomComplete ? 'bg-red-500 animate-pulse' : 'bg-sky-500 animate-ping'}`}></span>
+          {zoomComplete ? (
+            <>
+              {frameTime}
+              {timeRange && <span className="text-slate-500">({timeRange})</span>}
+            </>
+          ) : (
+            <span className="text-sky-400">Zooming in...</span>
+          )}
         </div>
         {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800 z-[1000]">
