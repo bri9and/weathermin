@@ -600,6 +600,168 @@ function MiniRadar({ location }) {
   )
 }
 
+// Friendly Daily Weather Greeting
+function DailyGreeting({ modelData, dailyForecast, airQuality }) {
+  const greeting = useMemo(() => {
+    if (!modelData?.current || !dailyForecast?.daily) return null
+
+    const current = modelData.current
+    const daily = dailyForecast.daily
+    const temp = Math.round(current.temperature_2m)
+    const weatherCode = current.weather_code
+    const humidity = current.relative_humidity_2m
+    const windSpeed = Math.round(current.wind_speed_10m)
+    const uvIndex = dailyForecast.current?.uv_index || 0
+    const todayHigh = Math.round(daily.temperature_2m_max[0])
+    const todayLow = Math.round(daily.temperature_2m_min[0])
+    const precipProb = daily.precipitation_probability_max[0] || 0
+    const snowfall = (daily.snowfall_sum[0] || 0) / 2.54
+    const aqi = airQuality?.current?.us_aqi
+
+    // Time-based greeting
+    const hour = new Date().getHours()
+    let timeGreeting = 'Good morning'
+    if (hour >= 12 && hour < 17) timeGreeting = 'Good afternoon'
+    else if (hour >= 17 && hour < 21) timeGreeting = 'Good evening'
+    else if (hour >= 21 || hour < 5) timeGreeting = 'Good night'
+
+    // Build the message
+    const messages = []
+    const tips = []
+
+    // Temperature feeling
+    if (temp <= 20) {
+      messages.push(`Brrr! It's a chilly ${temp}°F out there`)
+      tips.push('Bundle up warm today!')
+    } else if (temp <= 32) {
+      messages.push(`It's a cold ${temp}°F right now`)
+      tips.push('Layer up and stay cozy!')
+    } else if (temp <= 50) {
+      messages.push(`A cool ${temp}°F to start`)
+      tips.push('A light jacket should do the trick')
+    } else if (temp <= 70) {
+      messages.push(`A pleasant ${temp}°F today`)
+      tips.push('Perfect weather to get outside!')
+    } else if (temp <= 85) {
+      messages.push(`A warm ${temp}°F awaits you`)
+      tips.push('Great day for outdoor activities!')
+    } else {
+      messages.push(`It's a hot ${temp}°F out there`)
+      tips.push('Stay cool and drink plenty of water!')
+    }
+
+    // Weather conditions
+    if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) {
+      messages.push('with snow falling')
+      tips.push('Drive carefully on slick roads')
+    } else if ([61, 63, 65, 80, 81, 82].includes(weatherCode)) {
+      messages.push('with rain coming down')
+      tips.push("Don't forget your umbrella!")
+    } else if ([51, 53, 55, 56, 57].includes(weatherCode)) {
+      messages.push('with light drizzle')
+      tips.push('A raincoat might come in handy')
+    } else if ([95, 96, 99].includes(weatherCode)) {
+      messages.push('with thunderstorms')
+      tips.push('Best to stay indoors if you can')
+    } else if ([0, 1].includes(weatherCode)) {
+      messages.push('under clear skies')
+    } else if ([2, 3].includes(weatherCode)) {
+      messages.push('with some clouds around')
+    } else if ([45, 48].includes(weatherCode)) {
+      messages.push('with foggy conditions')
+      tips.push('Take it slow if you are driving')
+    }
+
+    // Snow forecast
+    if (snowfall > 0) {
+      if (snowfall >= 6) {
+        tips.push(`Heavy snow expected: ${snowfall.toFixed(1)}" - consider staying home!`)
+      } else if (snowfall >= 3) {
+        tips.push(`Significant snow coming: ${snowfall.toFixed(1)}" - plan accordingly`)
+      } else {
+        tips.push(`Light snow expected: ${snowfall.toFixed(1)}"`)
+      }
+    }
+
+    // Rain probability (if not already raining/snowing)
+    if (precipProb >= 70 && ![61, 63, 65, 71, 73, 75, 80, 81, 82, 85, 86].includes(weatherCode)) {
+      tips.push(`${precipProb}% chance of precipitation - pack an umbrella just in case!`)
+    } else if (precipProb >= 40 && ![61, 63, 65, 71, 73, 75, 80, 81, 82, 85, 86].includes(weatherCode)) {
+      tips.push(`${precipProb}% rain chance later`)
+    }
+
+    // UV warning
+    if (uvIndex >= 8) {
+      tips.push('UV is very high - sunscreen is a must!')
+    } else if (uvIndex >= 6) {
+      tips.push('UV is high - protect your skin!')
+    } else if (uvIndex >= 3 && [0, 1, 2].includes(weatherCode)) {
+      tips.push('Moderate UV - sunglasses recommended')
+    }
+
+    // Wind
+    if (windSpeed >= 30) {
+      tips.push('Very windy - hold onto your hat!')
+    } else if (windSpeed >= 20) {
+      tips.push('Breezy conditions today')
+    }
+
+    // Air quality
+    if (aqi && aqi > 150) {
+      tips.push('Air quality is poor - limit outdoor exposure')
+    } else if (aqi && aqi > 100) {
+      tips.push('Air quality is moderate - sensitive groups take care')
+    }
+
+    // High/Low summary
+    const tempRange = `High of ${todayHigh}°, low of ${todayLow}°`
+
+    return {
+      timeGreeting,
+      mainMessage: messages.join(' '),
+      tempRange,
+      tips: tips.slice(0, 3), // Max 3 tips
+    }
+  }, [modelData, dailyForecast, airQuality])
+
+  if (!greeting) return null
+
+  return (
+    <Card className="mb-6 bg-gradient-to-r from-sky-500/10 to-blue-500/10 border-sky-500/20">
+      <div className="flex items-start gap-4">
+        <div className="text-4xl">
+          {greeting.tips.some(t => t.includes('umbrella')) ? '🌂' :
+           greeting.tips.some(t => t.includes('snow')) ? '❄️' :
+           greeting.tips.some(t => t.includes('sunscreen') || t.includes('UV')) ? '😎' :
+           greeting.mainMessage.includes('clear') ? '☀️' :
+           greeting.mainMessage.includes('cloud') ? '⛅' :
+           greeting.mainMessage.includes('rain') ? '🌧️' :
+           greeting.mainMessage.includes('thunder') ? '⛈️' :
+           greeting.mainMessage.includes('chilly') || greeting.mainMessage.includes('cold') ? '🧥' :
+           greeting.mainMessage.includes('hot') ? '🥵' : '🌤️'}
+        </div>
+        <div className="flex-1">
+          <h2 className="text-xl font-semibold text-white mb-1">
+            {greeting.timeGreeting}!
+          </h2>
+          <p className="text-slate-300 mb-2">
+            {greeting.mainMessage}. {greeting.tempRange}.
+          </p>
+          {greeting.tips.length > 0 && (
+            <ul className="space-y-1">
+              {greeting.tips.map((tip, i) => (
+                <li key={i} className="text-sm text-sky-300 flex items-center gap-2">
+                  <span className="text-sky-400">→</span> {tip}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 // Compact 10-Day Forecast Strip
 function TenDayStrip({ dailyForecast }) {
   const daily = dailyForecast.daily
@@ -1933,6 +2095,9 @@ export default function App() {
         )}
 
         <AlertBanner alerts={alerts} />
+
+        {/* Friendly Daily Greeting */}
+        <DailyGreeting modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
 
         {/* Radar - Front and Center */}
         <div className="mb-6">
