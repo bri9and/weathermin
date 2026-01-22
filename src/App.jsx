@@ -429,26 +429,36 @@ function ZoomAnimator({ center, startZoom, endZoom, onZoomComplete }) {
     if (hasAnimated.current) return
     hasAnimated.current = true
 
-    // Start at wide zoom
-    map.setView(center, startZoom, { animate: false })
+    // Wait for map to be ready
+    const startAnimation = () => {
+      // Start at wide zoom
+      map.setView(center, startZoom, { animate: false })
 
-    // Delay then fly to target
-    const timeout = setTimeout(() => {
-      map.flyTo(center, endZoom, {
-        duration: 2.5,
-        easeLinearity: 0.25,
-      })
+      // Delay then fly to target
+      setTimeout(() => {
+        map.flyTo(center, endZoom, {
+          duration: 2,
+        })
 
-      // Notify when zoom animation completes
-      const zoomTimeout = setTimeout(() => {
-        onZoomComplete?.()
-      }, 2700) // Slightly after flyTo duration
+        // Listen for zoom end event
+        map.once('zoomend', () => {
+          onZoomComplete?.()
+        })
 
-      return () => clearTimeout(zoomTimeout)
-    }, 500)
+        // Fallback timeout in case event doesn't fire
+        setTimeout(() => {
+          onZoomComplete?.()
+        }, 2500)
+      }, 300)
+    }
 
-    return () => clearTimeout(timeout)
-  }, [])
+    // Check if map is ready
+    if (map._loaded) {
+      startAnimation()
+    } else {
+      map.once('load', startAnimation)
+    }
+  }, [map, center, startZoom, endZoom, onZoomComplete])
 
   return null
 }
@@ -458,6 +468,7 @@ function MiniRadar({ location }) {
   const [currentFrame, setCurrentFrame] = useState(0)
   const [zoomComplete, setZoomComplete] = useState(false)
   const center = useMemo(() => [location.lat, location.lon], [location.lat, location.lon])
+  const handleZoomComplete = useCallback(() => setZoomComplete(true), [])
 
   // Fetch radar frames with local caching for extended history (up to 4 hours)
   useEffect(() => {
@@ -555,8 +566,8 @@ function MiniRadar({ location }) {
           <ZoomAnimator
             center={center}
             startZoom={3}
-            endZoom={7}
-            onZoomComplete={() => setZoomComplete(true)}
+            endZoom={8}
+            onZoomComplete={handleZoomComplete}
           />
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
