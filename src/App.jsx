@@ -600,6 +600,165 @@ function MiniRadar({ location }) {
   )
 }
 
+// Compact 10-Day Forecast Strip
+function TenDayStrip({ dailyForecast }) {
+  const daily = dailyForecast.daily
+
+  return (
+    <Card className="mb-6 p-0 overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-700/50">
+        <h3 className="text-slate-200 font-medium flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-sky-400" />
+          10-Day Forecast
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="flex" style={{ minWidth: 'max-content' }}>
+          {daily.time.slice(0, 10).map((date, i) => {
+            const weatherCode = daily.weather_code[i]
+            const Icon = getWeatherIconFromCode(weatherCode)
+            const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+            const snowfall = daily.snowfall_sum[i] / 2.54
+            const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
+            const dayNum = new Date(date).getDate()
+
+            return (
+              <div
+                key={i}
+                className={`flex flex-col items-center py-4 px-4 border-r border-slate-700/30 last:border-r-0 ${
+                  snowfall > 0 ? 'bg-sky-500/5' : ''
+                }`}
+              >
+                <div className="text-xs text-slate-400 font-medium">{dayName}</div>
+                <div className="text-lg text-slate-300">{dayNum}</div>
+                <Icon className={`w-8 h-8 my-2 ${isSnowy ? 'text-sky-300' : 'text-amber-400'}`} />
+                <div className="text-white font-medium">{Math.round(daily.temperature_2m_max[i])}°</div>
+                <div className="text-slate-500 text-sm">{Math.round(daily.temperature_2m_min[i])}°</div>
+                {snowfall > 0 && (
+                  <div className="text-xs text-sky-300 mt-1">{snowfall.toFixed(1)}"</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// Calendar Month View
+function CalendarMonth({ dailyForecast }) {
+  const daily = dailyForecast.daily
+  const today = new Date()
+  const currentMonth = today.getMonth()
+  const currentYear = today.getFullYear()
+
+  // Create forecast lookup by date string
+  const forecastByDate = useMemo(() => {
+    const lookup = {}
+    daily.time.forEach((date, i) => {
+      lookup[date] = {
+        weatherCode: daily.weather_code[i],
+        high: Math.round(daily.temperature_2m_max[i]),
+        low: Math.round(daily.temperature_2m_min[i]),
+        snow: daily.snowfall_sum[i] / 2.54,
+      }
+    })
+    return lookup
+  }, [daily])
+
+  // Get days in month
+  const firstDay = new Date(currentYear, currentMonth, 1)
+  const lastDay = new Date(currentYear, currentMonth + 1, 0)
+  const startDayOfWeek = firstDay.getDay()
+  const daysInMonth = lastDay.getDate()
+
+  // Build calendar grid
+  const weeks = []
+  let currentWeek = []
+
+  // Add empty cells for days before first of month
+  for (let i = 0; i < startDayOfWeek; i++) {
+    currentWeek.push(null)
+  }
+
+  // Add days of month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    currentWeek.push({ day, dateStr, forecast: forecastByDate[dateStr] })
+
+    if (currentWeek.length === 7) {
+      weeks.push(currentWeek)
+      currentWeek = []
+    }
+  }
+
+  // Add remaining days
+  if (currentWeek.length > 0) {
+    while (currentWeek.length < 7) {
+      currentWeek.push(null)
+    }
+    weeks.push(currentWeek)
+  }
+
+  const monthName = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const todayDate = today.getDate()
+
+  return (
+    <Card className="mb-6">
+      <h3 className="text-slate-200 font-medium mb-4 flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-sky-400" />
+        {monthName}
+      </h3>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          <div key={day} className="text-center text-xs text-slate-500 font-medium py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {weeks.flat().map((cell, i) => {
+          if (!cell) {
+            return <div key={i} className="aspect-square" />
+          }
+
+          const { day, forecast } = cell
+          const isToday = day === todayDate
+          const Icon = forecast ? getWeatherIconFromCode(forecast.weatherCode) : null
+          const isSnowy = forecast && [71, 73, 75, 77, 85, 86].includes(forecast.weatherCode)
+
+          return (
+            <div
+              key={i}
+              className={`aspect-square rounded-lg p-1 flex flex-col items-center justify-center text-center ${
+                isToday ? 'bg-sky-500/20 border border-sky-500/50' : ''
+              } ${forecast?.snow > 0 ? 'bg-sky-500/10' : ''}`}
+            >
+              <div className={`text-xs ${isToday ? 'text-sky-400 font-bold' : 'text-slate-400'}`}>
+                {day}
+              </div>
+              {Icon && (
+                <Icon className={`w-4 h-4 my-0.5 ${isSnowy ? 'text-sky-300' : 'text-amber-400'}`} />
+              )}
+              {forecast && (
+                <div className="text-xs">
+                  <span className="text-white">{forecast.high}°</span>
+                  <span className="text-slate-500">/{forecast.low}°</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
 function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality }) {
   if (!dailyForecast) return <LoadingSpinner />
 
@@ -1707,12 +1866,10 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
-                <Cloud className="w-6 h-6 text-white" />
-              </div>
+              <img src="/icons/icon-192.png" alt="WeatherMin" className="w-10 h-10 rounded-xl" />
               <div>
                 <h1 className="text-xl font-semibold text-white">WeatherMin</h1>
-                <p className="text-xs text-slate-400">NWS + GFS/HRRR Data</p>
+                <p className="text-xs text-slate-400">v1.0.0</p>
               </div>
             </div>
 
@@ -1781,6 +1938,12 @@ export default function App() {
         <div className="mb-6">
           <MiniRadar location={location} />
         </div>
+
+        {/* 10-Day Forecast Strip */}
+        {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
+
+        {/* Calendar Month View */}
+        {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
 
         {modelData && <CurrentConditions data={modelData} location={location} />}
 
