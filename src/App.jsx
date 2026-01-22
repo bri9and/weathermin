@@ -782,33 +782,35 @@ function TenDayStrip({ dailyForecast }) {
           10-Day Forecast
         </h3>
       </div>
-      <div className="grid grid-cols-5 sm:grid-cols-10">
-        {daily.time.slice(0, 10).map((date, i) => {
-          const weatherCode = daily.weather_code[i]
-          const Icon = getWeatherIconFromCode(weatherCode)
-          const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
-          const snowfall = daily.snowfall_sum[i] / 2.54
-          const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
-          const dayNum = new Date(date).getDate()
+      <div className="overflow-x-auto">
+        <div className="flex sm:grid sm:grid-cols-10" style={{ minWidth: 'max-content' }}>
+          {daily.time.slice(0, 10).map((date, i) => {
+            const weatherCode = daily.weather_code[i]
+            const Icon = getWeatherIconFromCode(weatherCode)
+            const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+            const snowfall = daily.snowfall_sum[i] / 2.54
+            const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
+            const dayNum = new Date(date).getDate()
 
-          return (
-            <div
-              key={i}
-              className={`flex flex-col items-center py-5 px-2 border-r border-slate-200 dark:border-slate-700/30 last:border-r-0 ${
-                snowfall > 0 ? 'bg-sky-100 dark:bg-sky-500/10' : ''
-              } ${i === 0 ? 'bg-amber-50 dark:bg-amber-500/10' : ''}`}
-            >
-              <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">{dayName}</div>
-              <div className="text-xl text-slate-700 dark:text-slate-300 font-medium">{dayNum}</div>
-              <Icon className={`w-12 h-12 my-3 ${isSnowy ? 'text-sky-400' : 'text-amber-500'}`} />
-              <div className="text-xl text-slate-800 dark:text-white font-semibold">{Math.round(daily.temperature_2m_max[i])}°</div>
-              <div className="text-slate-500 dark:text-slate-500">{Math.round(daily.temperature_2m_min[i])}°</div>
-              {snowfall > 0 && (
-                <div className="text-sm text-sky-500 dark:text-sky-300 mt-1 font-medium">{snowfall.toFixed(1)}"</div>
-              )}
-            </div>
-          )
-        })}
+            return (
+              <div
+                key={i}
+                className={`flex flex-col items-center py-5 px-4 sm:px-2 border-r border-slate-200 dark:border-slate-700/30 last:border-r-0 min-w-[72px] ${
+                  snowfall > 0 ? 'bg-sky-100 dark:bg-sky-500/10' : ''
+                } ${i === 0 ? 'bg-amber-50 dark:bg-amber-500/10' : ''}`}
+              >
+                <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">{dayName}</div>
+                <div className="text-xl text-slate-700 dark:text-slate-300 font-medium">{dayNum}</div>
+                <Icon className={`w-10 h-10 sm:w-12 sm:h-12 my-2 sm:my-3 ${isSnowy ? 'text-sky-400' : 'text-amber-500'}`} />
+                <div className="text-lg sm:text-xl text-slate-800 dark:text-white font-semibold">{Math.round(daily.temperature_2m_max[i])}°</div>
+                <div className="text-slate-500 dark:text-slate-500">{Math.round(daily.temperature_2m_min[i])}°</div>
+                {snowfall > 0 && (
+                  <div className="text-sm text-sky-500 dark:text-sky-300 mt-1 font-medium">{snowfall.toFixed(1)}"</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </Card>
   )
@@ -2039,9 +2041,9 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700/50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src="/icons/icon-192.png" alt="WeatherMin" className="w-10 h-10 rounded-xl" />
-              <div>
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <img src="/icons/icon-192.png" alt="WeatherMin" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
+              <div className="hidden sm:block">
                 <h1 className="text-xl font-semibold text-slate-800 dark:text-white">WeatherMin</h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">v1.0.0</p>
               </div>
@@ -2095,9 +2097,9 @@ export default function App() {
             {/* User Auth */}
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-500/20 border border-sky-500/30 hover:bg-sky-500/30 transition-colors text-sky-400">
+                <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-lg bg-sky-500/20 border border-sky-500/30 hover:bg-sky-500/30 transition-colors text-sky-500 dark:text-sky-400">
                   <LogIn className="w-4 h-4" />
-                  <span className="text-sm font-medium">Sign In</span>
+                  <span className="text-sm font-medium hidden sm:inline">Sign In</span>
                 </button>
               </SignInButton>
             </SignedOut>
