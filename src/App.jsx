@@ -146,6 +146,7 @@ function AlertBanner({ alerts }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [hasCompleted, setHasCompleted] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const isDark = useColorScheme()
 
   // Auto-cycle through alerts every 5 seconds
   useEffect(() => {
@@ -172,16 +173,25 @@ function AlertBanner({ alerts }) {
 
   const currentAlert = alerts[currentIndex]
 
+  // Theme-aware styles
+  const bannerBg = isDark ? 'bg-amber-500/10' : 'bg-amber-50'
+  const bannerBorder = isDark ? 'border-amber-500/30' : 'border-amber-300'
+  const textPrimary = isDark ? 'text-amber-200' : 'text-amber-800'
+  const textSecondary = isDark ? 'text-amber-200/60' : 'text-amber-600'
+  const textMuted = isDark ? 'text-amber-200/40' : 'text-amber-500'
+  const iconColor = isDark ? 'text-amber-400' : 'text-amber-500'
+  const dismissText = isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'
+
   // Show button to view alerts after cycling completes
   if (hasCompleted && !isExpanded) {
     return (
       <div className="mb-6">
         <button
           onClick={() => setIsExpanded(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 ${bannerBg} border ${bannerBorder} rounded-lg hover:bg-amber-500/20 transition-colors`}
         >
-          <AlertTriangle className="w-4 h-4 text-amber-400" />
-          <span className="text-amber-200 text-sm font-medium">
+          <AlertTriangle className={`w-4 h-4 ${iconColor}`} />
+          <span className={`${textPrimary} text-sm font-medium`}>
             {alerts.length} Active Alert{alerts.length !== 1 ? 's' : ''}
           </span>
         </button>
@@ -194,7 +204,7 @@ function AlertBanner({ alerts }) {
     return (
       <div className="mb-6 space-y-2">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-amber-200 text-sm font-medium">
+          <span className={`${textPrimary} text-sm font-medium`}>
             {alerts.length} Active Alert{alerts.length !== 1 ? 's' : ''}
           </span>
           <button
@@ -202,7 +212,7 @@ function AlertBanner({ alerts }) {
               setIsExpanded(false)
               setHasCompleted(true)
             }}
-            className="text-slate-400 hover:text-slate-200 text-sm"
+            className={`${dismissText} text-sm`}
           >
             Dismiss
           </button>
@@ -210,12 +220,12 @@ function AlertBanner({ alerts }) {
         {alerts.map((alert, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg"
+            className={`flex items-center gap-3 p-3 ${bannerBg} border ${bannerBorder} rounded-lg`}
           >
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <AlertTriangle className={`w-5 h-5 ${iconColor} shrink-0`} />
             <div className="flex-1 min-w-0">
-              <p className="text-amber-200 font-medium truncate">{alert.properties?.headline}</p>
-              <p className="text-amber-200/60 text-sm truncate">{alert.properties?.areaDesc}</p>
+              <p className={`${textPrimary} font-medium truncate`}>{alert.properties?.headline}</p>
+              <p className={`${textSecondary} text-sm truncate`}>{alert.properties?.areaDesc}</p>
             </div>
           </div>
         ))}
@@ -226,13 +236,13 @@ function AlertBanner({ alerts }) {
   // Show single alert cycling view
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg animate-fade-in">
-        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+      <div className={`flex items-center gap-3 p-3 ${bannerBg} border ${bannerBorder} rounded-lg animate-fade-in`}>
+        <AlertTriangle className={`w-5 h-5 ${iconColor} shrink-0`} />
         <div className="flex-1 min-w-0">
-          <p className="text-amber-200 font-medium truncate">{currentAlert?.properties?.headline}</p>
-          <p className="text-amber-200/60 text-sm truncate">{currentAlert?.properties?.areaDesc}</p>
+          <p className={`${textPrimary} font-medium truncate`}>{currentAlert?.properties?.headline}</p>
+          <p className={`${textSecondary} text-sm truncate`}>{currentAlert?.properties?.areaDesc}</p>
         </div>
-        <div className="text-xs text-amber-200/40 shrink-0">
+        <div className={`text-xs ${textMuted} shrink-0`}>
           {currentIndex + 1}/{alerts.length}
         </div>
       </div>
