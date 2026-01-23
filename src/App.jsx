@@ -728,13 +728,16 @@ function MiniRadar({ location }) {
   )
 }
 
-// GOES Satellite Loop - animated GIF for user's region
+// GOES Satellite Loop - animated frames for user's region
 function SatelliteLoop({ location }) {
   const isDark = useColorScheme()
+  const [frames, setFrames] = useState([])
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   // Map lat/lon to GOES satellite and sector
   const getSatelliteSector = (lat, lon) => {
-    // GOES-West (GOES18/19) for western US, GOES-East (GOES16) for eastern
+    // GOES-West (GOES18) for western US, GOES-East (GOES16) for eastern
     const isWest = lon < -105
 
     if (isWest) {
@@ -757,10 +760,79 @@ function SatelliteLoop({ location }) {
   }
 
   const { sat, sector, name } = getSatelliteSector(location.lat, location.lon)
-  const sectorUpper = sector.toUpperCase()
 
-  // Animated GIF URL
-  const gifUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${sat}-${sectorUpper}-GEOCOLOR-1000x1000.gif`
+  // Generate frame URLs for last 2 hours (24 frames at 5-min intervals)
+  useEffect(() => {
+    const generateFrameUrls = () => {
+      const urls = []
+      const now = new Date()
+      // Round down to nearest 5 minutes, then go back 10 minutes to ensure images exist
+      now.setMinutes(Math.floor(now.getMinutes() / 5) * 5 - 10)
+      now.setSeconds(0)
+      now.setMilliseconds(0)
+
+      // Generate 24 frames going back 2 hours
+      for (let i = 23; i >= 0; i--) {
+        const frameTime = new Date(now.getTime() - i * 5 * 60 * 1000)
+        const year = frameTime.getUTCFullYear()
+        const month = String(frameTime.getUTCMonth() + 1).padStart(2, '0')
+        const day = String(frameTime.getUTCDate()).padStart(2, '0')
+        const hour = String(frameTime.getUTCHours()).padStart(2, '0')
+        const minute = String(frameTime.getUTCMinutes()).padStart(2, '0')
+        const timestamp = `${year}${month}${day}${hour}${minute}`
+
+        urls.push({
+          url: `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${timestamp}_${sat}-ABI-${sector}-GEOCOLOR-1200x1200.jpg`,
+          time: frameTime
+        })
+      }
+      return urls
+    }
+
+    const frameUrls = generateFrameUrls()
+    setFrames(frameUrls)
+
+    // Preload images
+    let loadedCount = 0
+    frameUrls.forEach(frame => {
+      const img = new Image()
+      img.onload = () => {
+        loadedCount++
+        if (loadedCount >= frameUrls.length / 2) {
+          setLoading(false)
+        }
+      }
+      img.onerror = () => {
+        loadedCount++
+        if (loadedCount >= frameUrls.length / 2) {
+          setLoading(false)
+        }
+      }
+      img.src = frame.url
+    })
+
+    // Refresh frame list every 5 minutes
+    const refreshInterval = setInterval(() => {
+      setFrames(generateFrameUrls())
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(refreshInterval)
+  }, [sat, sector])
+
+  // Animate through frames
+  useEffect(() => {
+    if (frames.length === 0 || loading) return
+    const interval = setInterval(() => {
+      setCurrentFrame(prev => (prev + 1) % frames.length)
+    }, 200) // 200ms per frame for smooth animation
+    return () => clearInterval(interval)
+  }, [frames.length, loading])
+
+  // Current frame info
+  const currentFrameData = frames[currentFrame]
+  const frameTime = currentFrameData?.time
+    ? currentFrameData.time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : ''
 
   // Link to full NOAA page
   const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=24`
@@ -768,26 +840,39 @@ function SatelliteLoop({ location }) {
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
       <div className="h-[375px] relative bg-slate-900">
-        <img
-          src={gifUrl}
-          alt={`GOES Satellite - ${name}`}
-          className="w-full h-full object-cover"
-        />
+        {loading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
+          </div>
+        ) : (
+          <img
+            src={currentFrameData?.url}
+            alt={`GOES Satellite - ${name}`}
+            className="w-full h-full object-cover"
+          />
+        )}
         {/* Title overlay */}
         <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
           Satellite
         </div>
-        {/* Info overlay */}
+        {/* Time indicator */}
         <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          {name}
+          {frameTime} • {name}
+        </div>
+        {/* Progress bar */}
+        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+          <div
+            className="h-full bg-green-500 transition-all duration-200"
+            style={{ width: `${((currentFrame + 1) / frames.length) * 100}%` }}
+          />
         </div>
         {/* Link to NOAA */}
         <a
           href={noaaUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`absolute bottom-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-1 hover:scale-105 transition-transform ${isDark ? 'bg-slate-900/80 text-slate-400 hover:text-white' : 'bg-white/90 text-slate-500 hover:text-slate-800 shadow-sm'}`}
+          className={`absolute top-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-1 hover:scale-105 transition-transform ${isDark ? 'bg-slate-900/80 text-slate-400 hover:text-white' : 'bg-white/90 text-slate-500 hover:text-slate-800 shadow-sm'}`}
         >
           NOAA <ExternalLink className="w-3 h-3" />
         </a>
@@ -3043,7 +3128,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.2
+          v1.5.3
         </div>
       </footer>
     </div>
