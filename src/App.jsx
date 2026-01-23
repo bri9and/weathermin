@@ -2280,6 +2280,7 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
   const [radarPreview, setRadarPreview] = useState(null)
   const [gemData, setGemData] = useState(null)
   const [loadingGem, setLoadingGem] = useState(false)
+  const [showSatelliteLoop, setShowSatelliteLoop] = useState(false)
 
   // Check API statuses on mount
   useEffect(() => {
@@ -2476,14 +2477,27 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
                     {goesSector.sector} Sector
                   </div>
                 </div>
-                <a
-                  href={`https://www.star.nesdis.noaa.gov/GOES/${goesSector.satellite === 'GOES16' ? 'index' : 'GOES18_CONUS'}.php`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
-                >
-                  View full satellite <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="mt-3 flex items-center justify-between">
+                  <a
+                    href={`https://www.star.nesdis.noaa.gov/GOES/${goesSector.satellite === 'GOES16' ? 'index' : 'GOES18_CONUS'}.php`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
+                  >
+                    View full satellite <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    onClick={() => setShowSatelliteLoop(!showSatelliteLoop)}
+                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${
+                      showSatelliteLoop
+                        ? 'bg-green-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    <Play className="w-3 h-3" />
+                    {showSatelliteLoop ? 'Hide Loop' : 'View Loop'}
+                  </button>
+                </div>
               </Card>
 
               {/* Air Quality Card */}
@@ -2655,6 +2669,13 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
                 )}
               </Card>
             </div>
+
+            {/* Satellite Loop - shown when requested */}
+            {showSatelliteLoop && (
+              <div className="mt-4">
+                <SatelliteLoop location={location} />
+              </div>
+            )}
           </div>
 
           {/* API Status Overview */}
@@ -3128,7 +3149,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.3
+          v1.5.4
         </div>
       </footer>
     </div>
