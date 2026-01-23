@@ -36,9 +36,6 @@ import {
   Navigation,
   Snowflake,
   LogIn,
-  Radio,
-  BarChart3,
-  Link,
 } from 'lucide-react'
 import { MapContainer, TileLayer, useMap, GeoJSON, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -71,12 +68,6 @@ const DEFAULT_LOCATION = {
   state: 'PA',
 }
 
-const TABS = [
-  { id: 'forecast', label: 'Forecast', icon: Calendar },
-  { id: 'radar', label: 'Radar', icon: Radio },
-  { id: 'models', label: 'Models', icon: BarChart3 },
-  { id: 'links', label: 'Sources', icon: Link },
-]
 
 const WEATHER_LINKS = {
   'Model Data': [
@@ -2160,7 +2151,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showResults, setShowResults] = useState(false)
-  const [activeTab, setActiveTab] = useState('forecast')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -2467,34 +2457,6 @@ export default function App() {
         {/* Air Quality */}
         <AirQualityCard airQuality={airQuality} />
 
-        {/* Navigation Tabs */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/30'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        <div className="mb-6">
-          {activeTab === 'forecast' && <ForecastTab forecast={forecast} dailyForecast={dailyForecast} location={location} modelData={modelData} airQuality={airQuality} />}
-          {activeTab === 'radar' && <RadarTab location={location} onGeolocate={handleGeolocate} locating={locating} />}
-          {activeTab === 'models' && <ModelsTab modelData={modelData} location={location} />}
-          {activeTab === 'links' && <LinksTab />}
-        </div>
-
         {/* Hourly Forecast Strip */}
         <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
@@ -2503,6 +2465,9 @@ export default function App() {
 
         {/* Calendar Month View */}
         {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
+
+        {/* Data Sources */}
+        <LinksTab />
       </main>
 
       {/* Footer */}
@@ -2531,7 +2496,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.3.1
+          v1.4.0
         </div>
       </footer>
     </div>
