@@ -2087,61 +2087,510 @@ function RadarTab({ location, onGeolocate, locating }) {
   )
 }
 
-function LinksTab() {
+// API Status indicator component
+function ApiStatusDot({ status }) {
+  const colors = {
+    online: 'bg-emerald-500',
+    offline: 'bg-red-500',
+    loading: 'bg-yellow-500 animate-pulse',
+    unknown: 'bg-slate-400'
+  }
   return (
-    <div className="space-y-8">
-      {/* Weather Resources */}
-      <div>
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Weather Resources</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {Object.entries(WEATHER_LINKS).map(([category, links]) => (
-            <Card key={category}>
-              <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h3>
-              <div className="space-y-1">
-                {links.map((link) => (
-                  <a
-                    key={link.url}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-colors group"
-                  >
-                    <span className="text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-sky-400">{link.name}</span>
-                    <ExternalLink className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-sky-400" />
-                  </a>
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+    <span className={`inline-block w-2 h-2 rounded-full ${colors[status] || colors.unknown}`} />
+  )
+}
 
-      {/* Raw Data Sources */}
-      <div>
-        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Raw Data Sources (APIs)</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {Object.entries(RAW_DATA_SOURCES).map(([category, sources]) => (
-            <Card key={category}>
-              <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h3>
-              <div className="space-y-2">
-                {sources.map((source) => (
-                  <div key={source.url} className="text-sm">
-                    <div className="text-slate-700 dark:text-slate-300 font-medium">{source.name}</div>
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-sky-400 hover:underline break-all text-xs font-mono"
-                    >
-                      {source.url}
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
+// Live Data Sources Page component
+function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alerts }) {
+  const isDark = useColorScheme()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [apiStatuses, setApiStatuses] = useState({})
+  const [radarPreview, setRadarPreview] = useState(null)
+  const [gemData, setGemData] = useState(null)
+  const [loadingGem, setLoadingGem] = useState(false)
+
+  // Check API statuses on mount
+  useEffect(() => {
+    const checkApis = async () => {
+      const statuses = {}
+
+      // Check Open-Meteo GFS
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/gfs?latitude=40&longitude=-80&current=temperature_2m', { method: 'HEAD' })
+        statuses['open-meteo-gfs'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['open-meteo-gfs'] = 'offline' }
+
+      // Check Open-Meteo GEM
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/gem?latitude=40&longitude=-80&current=temperature_2m', { method: 'HEAD' })
+        statuses['open-meteo-gem'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['open-meteo-gem'] = 'offline' }
+
+      // Check NWS API
+      try {
+        const res = await fetch('https://api.weather.gov/points/40,-80', { headers: { 'User-Agent': 'WeatherDashboard/1.0' } })
+        statuses['nws'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['nws'] = 'offline' }
+
+      // Check RainViewer
+      try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json')
+        statuses['rainviewer'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['rainviewer'] = 'offline' }
+
+      // Check Air Quality API
+      try {
+        const res = await fetch('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=40&longitude=-80&current=us_aqi', { method: 'HEAD' })
+        statuses['air-quality'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['air-quality'] = 'offline' }
+
+      setApiStatuses(statuses)
+    }
+
+    checkApis()
+    const interval = setInterval(checkApis, 60000) // Check every minute
+    return () => clearInterval(interval)
+  }, [])
+
+  // Fetch radar preview
+  useEffect(() => {
+    const fetchRadar = async () => {
+      try {
+        const res = await fetch('https://api.rainviewer.com/public/weather-maps.json')
+        const data = await res.json()
+        const latestFrame = data.radar.past[data.radar.past.length - 1]
+        if (latestFrame) {
+          setRadarPreview({
+            path: latestFrame.path,
+            time: new Date(latestFrame.time * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          })
+        }
+      } catch (err) {
+        console.error('Failed to fetch radar preview:', err)
+      }
+    }
+    fetchRadar()
+  }, [])
+
+  // Fetch GEM model data for comparison when expanded
+  useEffect(() => {
+    if (!isExpanded || gemData || loadingGem) return
+
+    const fetchGem = async () => {
+      setLoadingGem(true)
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/gem?latitude=${location.lat}&longitude=${location.lon}` +
+          `&hourly=temperature_2m&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=3`
+        )
+        const data = await res.json()
+        setGemData(data)
+      } catch (err) {
+        console.error('Failed to fetch GEM data:', err)
+      }
+      setLoadingGem(false)
+    }
+    fetchGem()
+  }, [isExpanded, location.lat, location.lon, gemData, loadingGem])
+
+  // Get current AQI data
+  const aqi = airQuality?.current
+  const aqiValue = aqi?.us_aqi ?? 0
+  const aqiLevel = getAqiLevel(aqiValue)
+
+  // Get GOES sector based on location
+  const getGoesSector = (lon) => {
+    if (lon < -100) return { satellite: 'GOES18', sector: 'PSWA' } // West
+    if (lon < -85) return { satellite: 'GOES16', sector: 'UMVL' } // Central
+    return { satellite: 'GOES16', sector: 'NE' } // East
+  }
+  const goesSector = getGoesSector(location.lon)
+  const goesImageUrl = `https://cdn.star.nesdis.noaa.gov/${goesSector.satellite}/ABI/SECTOR/${goesSector.sector}/GEOCOLOR/latest.jpg`
+
+  // Count online APIs
+  const onlineCount = Object.values(apiStatuses).filter(s => s === 'online').length
+  const totalApis = Object.keys(apiStatuses).length
+
+  // Model comparison data
+  const gfsTemps = modelData?.hourly?.temperature_2m?.slice(0, 24) || []
+  const gemTemps = gemData?.hourly?.temperature_2m?.slice(0, 24) || []
+
+  return (
+    <div className="space-y-6 mt-8">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 rounded-2xl border border-blue-200 dark:border-blue-500/30 hover:from-blue-500/20 hover:to-purple-500/20 dark:hover:from-blue-500/30 dark:hover:to-purple-500/30 transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/20 rounded-lg">
+            <Activity className="w-5 h-5 text-blue-500" />
+          </div>
+          <div className="text-left">
+            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Data Sources</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {totalApis > 0 ? `${onlineCount}/${totalApis} APIs online` : 'Checking status...'}
+            </p>
+          </div>
         </div>
-      </div>
+        <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {isExpanded && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Live Data Preview Cards */}
+          <div>
+            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Live Data Previews
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Radar Preview Card */}
+              <Card className="overflow-hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <CloudRain className="w-4 h-4 text-sky-500" />
+                    Radar
+                  </h4>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <ApiStatusDot status={apiStatuses['rainviewer'] || 'loading'} />
+                    <span>RainViewer</span>
+                  </div>
+                </div>
+                {radarPreview ? (
+                  <div className="relative">
+                    <img
+                      src={`https://tilecache.rainviewer.com${radarPreview.path}/512/4/${Math.round(location.lat / 10)}/${Math.round((location.lon + 180) / 10)}/2/1_1.png`}
+                      alt="Radar preview"
+                      className="w-full h-32 object-cover rounded-lg bg-slate-100 dark:bg-slate-700"
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                    <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      {radarPreview.time}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-32 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
+                  </div>
+                )}
+                <a
+                  href="https://www.rainviewer.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
+                >
+                  View full radar <ExternalLink className="w-3 h-3" />
+                </a>
+              </Card>
+
+              {/* Satellite Preview Card */}
+              <Card className="overflow-hidden">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <Sun className="w-4 h-4 text-amber-500" />
+                    Satellite
+                  </h4>
+                  <span className="text-xs text-slate-500">{goesSector.satellite}</span>
+                </div>
+                <div className="relative">
+                  <img
+                    src={goesImageUrl}
+                    alt="GOES satellite imagery"
+                    className="w-full h-32 object-cover rounded-lg bg-slate-100 dark:bg-slate-700"
+                    onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>' }}
+                  />
+                  <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                    {goesSector.sector} Sector
+                  </div>
+                </div>
+                <a
+                  href={`https://www.star.nesdis.noaa.gov/GOES/${goesSector.satellite === 'GOES16' ? 'index' : 'GOES18_CONUS'}.php`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
+                >
+                  View full satellite <ExternalLink className="w-3 h-3" />
+                </a>
+              </Card>
+
+              {/* Air Quality Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <Wind className="w-4 h-4 text-emerald-500" />
+                    Air Quality
+                  </h4>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <ApiStatusDot status={apiStatuses['air-quality'] || 'loading'} />
+                    <span>Open-Meteo</span>
+                  </div>
+                </div>
+                {aqi ? (
+                  <div className="space-y-3">
+                    <div className={`text-center p-3 rounded-lg ${aqiLevel.bg}`}>
+                      <div className={`text-3xl font-bold ${aqiLevel.color}`}>{aqiValue}</div>
+                      <div className={`text-sm ${aqiLevel.color}`}>{aqiLevel.label}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <div className="text-slate-500">PM2.5</div>
+                        <div className="font-semibold text-slate-700 dark:text-slate-200">{aqi.pm2_5?.toFixed(1) || '--'}</div>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <div className="text-slate-500">PM10</div>
+                        <div className="font-semibold text-slate-700 dark:text-slate-200">{aqi.pm10?.toFixed(1) || '--'}</div>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <div className="text-slate-500">Ozone</div>
+                        <div className="font-semibold text-slate-700 dark:text-slate-200">{aqi.ozone?.toFixed(1) || '--'}</div>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <div className="text-slate-500">NO2</div>
+                        <div className="font-semibold text-slate-700 dark:text-slate-200">{aqi.nitrogen_dioxide?.toFixed(1) || '--'}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center text-slate-400">
+                    No AQI data available
+                  </div>
+                )}
+              </Card>
+
+              {/* Active Alerts Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    Active Alerts
+                  </h4>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <ApiStatusDot status={apiStatuses['nws'] || 'loading'} />
+                    <span>NWS</span>
+                  </div>
+                </div>
+                {alerts && alerts.length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {alerts.slice(0, 5).map((alert, i) => (
+                      <div
+                        key={i}
+                        className="p-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg"
+                      >
+                        <div className="text-sm font-medium text-amber-800 dark:text-amber-200 truncate">
+                          {alert.properties?.event || 'Weather Alert'}
+                        </div>
+                        <div className="text-xs text-amber-600 dark:text-amber-300/70 truncate">
+                          {alert.properties?.areaDesc}
+                        </div>
+                      </div>
+                    ))}
+                    {alerts.length > 5 && (
+                      <div className="text-xs text-slate-500 text-center">
+                        +{alerts.length - 5} more alerts
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-32 flex flex-col items-center justify-center text-slate-400">
+                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mb-2">
+                      <span className="text-emerald-500 text-lg">&#10003;</span>
+                    </div>
+                    <span className="text-sm">No active alerts</span>
+                  </div>
+                )}
+                <a
+                  href={`https://alerts.weather.gov/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600"
+                >
+                  View all alerts <ExternalLink className="w-3 h-3" />
+                </a>
+              </Card>
+
+              {/* Model Comparison Card */}
+              <Card className="sm:col-span-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-purple-500" />
+                    Model Comparison (24h)
+                  </h4>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-1 bg-blue-500 rounded" /> GFS
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-1 bg-purple-500 rounded" /> GEM
+                    </span>
+                  </div>
+                </div>
+                {gfsTemps.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex gap-1 h-24 items-end">
+                      {gfsTemps.slice(0, 24).map((temp, i) => {
+                        const gemTemp = gemTemps[i]
+                        const maxTemp = Math.max(...gfsTemps, ...(gemTemps.length ? gemTemps : gfsTemps))
+                        const minTemp = Math.min(...gfsTemps, ...(gemTemps.length ? gemTemps : gfsTemps))
+                        const range = maxTemp - minTemp || 1
+                        const gfsHeight = ((temp - minTemp) / range) * 80 + 20
+                        const gemHeight = gemTemp ? ((gemTemp - minTemp) / range) * 80 + 20 : 0
+
+                        return (
+                          <div key={i} className="flex-1 flex gap-px items-end" title={`Hour ${i}: GFS ${Math.round(temp)}° ${gemTemp ? `/ GEM ${Math.round(gemTemp)}°` : ''}`}>
+                            <div
+                              className="flex-1 bg-blue-400/60 rounded-t transition-all hover:bg-blue-500"
+                              style={{ height: `${gfsHeight}%` }}
+                            />
+                            {gemTemp && (
+                              <div
+                                className="flex-1 bg-purple-400/60 rounded-t transition-all hover:bg-purple-500"
+                                style={{ height: `${gemHeight}%` }}
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Now</span>
+                      <span>+12h</span>
+                      <span>+24h</span>
+                    </div>
+                    {gemTemps.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded text-center">
+                          <div className="text-slate-500">GFS High</div>
+                          <div className="font-semibold text-blue-500">{Math.round(Math.max(...gfsTemps))}°</div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded text-center">
+                          <div className="text-slate-500">GEM High</div>
+                          <div className="font-semibold text-purple-500">{Math.round(Math.max(...gemTemps))}°</div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-700/50 p-2 rounded text-center">
+                          <div className="text-slate-500">Difference</div>
+                          <div className="font-semibold text-slate-700 dark:text-slate-200">
+                            {Math.abs(Math.round(Math.max(...gfsTemps)) - Math.round(Math.max(...gemTemps)))}°
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+
+          {/* API Status Overview */}
+          <Card>
+            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              API Status
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[
+                { id: 'open-meteo-gfs', name: 'Open-Meteo GFS', icon: Thermometer },
+                { id: 'open-meteo-gem', name: 'Open-Meteo GEM', icon: Thermometer },
+                { id: 'nws', name: 'NWS API', icon: Cloud },
+                { id: 'rainviewer', name: 'RainViewer', icon: CloudRain },
+                { id: 'air-quality', name: 'Air Quality', icon: Wind },
+              ].map(api => {
+                const Icon = api.icon
+                const status = apiStatuses[api.id] || 'loading'
+                return (
+                  <div
+                    key={api.id}
+                    className={`p-3 rounded-lg border ${
+                      status === 'online'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
+                        : status === 'offline'
+                        ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
+                        : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon className={`w-4 h-4 ${
+                        status === 'online' ? 'text-emerald-500' : status === 'offline' ? 'text-red-500' : 'text-slate-400'
+                      }`} />
+                      <ApiStatusDot status={status} />
+                    </div>
+                    <div className="text-xs font-medium text-slate-700 dark:text-slate-200">{api.name}</div>
+                    <div className={`text-xs ${
+                      status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
+                      status === 'offline' ? 'text-red-600 dark:text-red-400' : 'text-slate-500'
+                    }`}>
+                      {status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : 'Checking...'}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* Weather Resources */}
+          <div>
+            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <ExternalLink className="w-4 h-4 text-blue-500" />
+              Weather Resources
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {Object.entries(WEATHER_LINKS).map(([category, links]) => (
+                <Card key={category}>
+                  <h4 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h4>
+                  <div className="space-y-1">
+                    {links.map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-colors group"
+                      >
+                        <span className="text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-sky-400">{link.name}</span>
+                        <ExternalLink className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-sky-400" />
+                      </a>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Raw Data Sources */}
+          <div>
+            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Raw Data Sources (APIs)
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {Object.entries(RAW_DATA_SOURCES).map(([category, sources]) => (
+                <Card key={category}>
+                  <h4 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h4>
+                  <div className="space-y-2">
+                    {sources.map((source) => (
+                      <div key={source.url} className="text-sm">
+                        <div className="text-slate-700 dark:text-slate-300 font-medium">{source.name}</div>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-sky-400 hover:underline break-all text-xs font-mono"
+                        >
+                          {source.url}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2467,7 +2916,13 @@ export default function App() {
         {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
 
         {/* Data Sources */}
-        <LinksTab />
+        <DataSourcesPage
+          location={location}
+          modelData={modelData}
+          dailyForecast={dailyForecast}
+          airQuality={airQuality}
+          alerts={alerts}
+        />
       </main>
 
       {/* Footer */}
@@ -2496,7 +2951,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.4.0
+          v1.5.0
         </div>
       </footer>
     </div>
