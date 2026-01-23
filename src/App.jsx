@@ -1914,19 +1914,24 @@ export default function App() {
       const hourlyUrl = pointsData.properties.forecastHourly
 
       // 2. Fetch forecast, hourly, alerts, and model data in parallel
+      // Add cache-busting timestamp to prevent stale data
+      const cacheBust = `&_t=${Date.now()}`
+      const noCacheOpts = { cache: 'no-store' }
+      const nwsOpts = { headers: { 'User-Agent': 'WeatherDashboard/1.0' }, cache: 'no-store' }
+
       const [forecastRes, hourlyRes, alertsRes, modelRes, dailyRes, gemRes, aqiRes] = await Promise.all([
-        fetch(forecastUrl, { headers: { 'User-Agent': 'WeatherDashboard/1.0' } }),
-        fetch(hourlyUrl, { headers: { 'User-Agent': 'WeatherDashboard/1.0' } }),
-        fetch(`https://api.weather.gov/alerts/active?area=${loc.state}`, {
-          headers: { 'User-Agent': 'WeatherDashboard/1.0' },
-        }),
+        fetch(forecastUrl, nwsOpts),
+        fetch(hourlyUrl, nwsOpts),
+        fetch(`https://api.weather.gov/alerts/active?area=${loc.state}`, nwsOpts),
         fetch(
           `https://api.open-meteo.com/v1/gfs?latitude=${loc.lat}&longitude=${loc.lon}` +
             `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,` +
             `weather_code,surface_pressure,wind_speed_10m,wind_direction_10m` +
             `&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,` +
             `precipitation,weather_code,wind_speed_10m,wind_direction_10m,cape,snowfall` +
-            `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America/New_York`
+            `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America/New_York` +
+            cacheBust,
+          noCacheOpts
         ),
         // Daily forecast from Open-Meteo GFS model
         fetch(
@@ -1937,19 +1942,25 @@ export default function App() {
             `uv_index_max,sunrise,sunset` +
             `&current=uv_index,visibility,dew_point_2m` +
             `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch` +
-            `&timezone=America/New_York&forecast_days=16`
+            `&timezone=America/New_York&forecast_days=16` +
+            cacheBust,
+          noCacheOpts
         ),
         // Canadian GEM model for snow comparison (often higher for Northeast US)
         fetch(
           `https://api.open-meteo.com/v1/gem?latitude=${loc.lat}&longitude=${loc.lon}` +
             `&daily=snowfall_sum` +
-            `&timezone=America/New_York&forecast_days=16`
+            `&timezone=America/New_York&forecast_days=16` +
+            cacheBust,
+          noCacheOpts
         ),
         // Air quality data
         fetch(
           `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}` +
             `&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone` +
-            `&timezone=America/New_York`
+            `&timezone=America/New_York` +
+            cacheBust,
+          noCacheOpts
         ),
       ])
 
