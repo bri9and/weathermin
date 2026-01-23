@@ -915,26 +915,26 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
       warnings.push(`High UV (${Math.round(uvIndex)}) - seek shade midday`)
     }
 
-    // Build headline
+    // Build headline - friendly and conversational
     let headline = ''
     if (isStormy) {
-      headline = 'Storms today - plan indoor activities'
+      headline = "Looks like storms are heading our way - maybe a good day for indoor plans!"
     } else if (snowfall >= 4) {
-      headline = 'Significant snow - consider remote work'
+      headline = "Snow day vibes! We're expecting a good amount - plan accordingly."
     } else if (feelsLike <= 10) {
-      headline = 'Dangerously cold - minimize time outside'
+      headline = "Brrr, it's bitter cold out there! Keep warm and limit your time outside."
     } else if (feelsLike <= 32) {
-      headline = 'Bundle up before heading out'
+      headline = "It's chilly! You'll want your warm layers before heading out."
     } else if (temp >= 95) {
-      headline = 'Extreme heat - stay hydrated'
+      headline = "It's going to be a hot one! Stay cool and drink plenty of water."
     } else if (isRaining) {
-      headline = 'Wet weather - grab rain gear'
+      headline = "Rainy day ahead - don't forget your umbrella!"
     } else if (precipProb >= 70) {
-      headline = 'Rain likely later - pack an umbrella'
+      headline = "Rain's likely later, so you might want to pack an umbrella just in case."
     } else if (temp >= 70 && temp <= 80 && precipProb < 30 && uvIndex < 8) {
-      headline = 'Great day to be outside'
+      headline = "Beautiful day ahead! Perfect weather to get outside and enjoy."
     } else {
-      headline = `${todayHigh}° high today, ${todayLow}° tonight`
+      headline = `Looking at ${todayHigh}° today with a low of ${todayLow}° tonight.`
     }
 
     return { headline, wear, bring, warnings, temp, todayHigh, todayLow }
@@ -954,19 +954,13 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
           </div>
         </div>
 
-        {/* What to wear/bring */}
-        <div className="flex flex-wrap gap-4 text-sm">
+        {/* What to wear/bring - friendly suggestions */}
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           {brief.wear.length > 0 && (
-            <div>
-              <span className="text-slate-500 dark:text-slate-400">Wear:</span>{' '}
-              <span className="text-slate-700 dark:text-slate-200">{brief.wear.join(', ')}</span>
-            </div>
+            <p>You'll want to grab your <span className="font-medium">{brief.wear.join(', ').toLowerCase()}</span>.</p>
           )}
           {brief.bring.length > 0 && (
-            <div>
-              <span className="text-slate-500 dark:text-slate-400">Bring:</span>{' '}
-              <span className="text-slate-700 dark:text-slate-200">{brief.bring.join(', ')}</span>
-            </div>
+            <p>Don't forget: <span className="font-medium">{brief.bring.join(', ').toLowerCase()}</span>.</p>
           )}
         </div>
 
@@ -2455,6 +2449,9 @@ export default function App() {
         {/* 10-Day Forecast Strip */}
         {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
 
+        {/* Calendar Month View */}
+        {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
+
         {/* Tab Content */}
         <div>
           {activeTab === 'forecast' && <ForecastTab forecast={forecast} dailyForecast={dailyForecast} location={location} modelData={modelData} airQuality={airQuality} />}
@@ -2490,7 +2487,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.1.4
+          v1.2.0
         </div>
       </footer>
     </div>
