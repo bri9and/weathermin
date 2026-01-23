@@ -728,174 +728,196 @@ function MiniRadar({ location }) {
   )
 }
 
-// GOES Satellite Loop - animated satellite imagery based on user location
+// GOES Satellite Loop - hybrid approach: static image + video animation
 function SatelliteLoop({ location }) {
   const isDark = useColorScheme()
-  const [frames, setFrames] = useState([])
-  const [currentFrame, setCurrentFrame] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
+  const videoRef = useRef(null)
 
-  // Map lat/lon to GOES sector
+  // Complete sector mapping based on NOAA documentation
   const getSector = (lat, lon) => {
-    const isWest = lon < -105
-    if (isWest) {
+    // Western US - GOES-18
+    if (lon < -105) {
       if (lat > 45) return { sector: 'pnw', name: 'Pacific Northwest', sat: 'GOES18' }
       if (lat > 32) return { sector: 'psw', name: 'Pacific Southwest', sat: 'GOES18' }
-      return { sector: 'sw', name: 'Southwest', sat: 'GOES18' }
-    } else {
-      // Eastern US - GOES19
-      if (lat >= 41 && lat <= 49 && lon >= -93 && lon <= -75) {
-        return { sector: 'cgl', name: 'Great Lakes', sat: 'GOES19' }
-      }
-      if (lat >= 37 && lat <= 47 && lon >= -82 && lon <= -66) {
-        return { sector: 'ne', name: 'Northeast', sat: 'GOES19' }
-      }
-      if (lat >= 24 && lat < 37 && lon >= -90 && lon <= -75) {
-        return { sector: 'se', name: 'Southeast', sat: 'GOES19' }
-      }
-      if (lat >= 26 && lat < 40 && lon >= -105 && lon < -90) {
-        return { sector: 'sp', name: 'Southern Plains', sat: 'GOES19' }
-      }
-      if (lat >= 38 && lat <= 50 && lon >= -105 && lon < -85) {
-        return { sector: 'umv', name: 'Upper Mississippi Valley', sat: 'GOES19' }
-      }
-      if (lat < 31 && lon >= -98 && lon <= -80) {
-        return { sector: 'gm', name: 'Gulf of Mexico', sat: 'GOES19' }
-      }
-      // Default based on rough position
-      if (lon > -82) return { sector: 'ne', name: 'Northeast', sat: 'GOES19' }
+      return { sector: 'psw', name: 'Pacific Southwest', sat: 'GOES18' }
+    }
+
+    // Alaska - GOES-18
+    if (lat > 50) return { sector: 'ak', name: 'Alaska', sat: 'GOES18' }
+
+    // Hawaii - GOES-18
+    if (lat < 25 && lon < -150) return { sector: 'hi', name: 'Hawaii', sat: 'GOES18' }
+
+    // Puerto Rico - GOES-19
+    if (lat >= 17 && lat <= 19 && lon >= -68 && lon <= -65) {
+      return { sector: 'pr', name: 'Puerto Rico', sat: 'GOES19' }
+    }
+
+    // Eastern/Central US - GOES-19
+    // Northeast: New England, NY, NJ, PA, MD, DE
+    if (lat >= 38 && lat <= 48 && lon >= -80 && lon <= -66) {
+      return { sector: 'ne', name: 'Northeast', sat: 'GOES19' }
+    }
+
+    // Great Lakes: MI, WI, IL, IN, OH, western NY/PA
+    if (lat >= 40 && lat <= 49 && lon >= -93 && lon < -80) {
+      return { sector: 'cgl', name: 'Great Lakes', sat: 'GOES19' }
+    }
+
+    // Southeast: VA, NC, SC, GA, FL, AL, eastern TN
+    if (lat >= 24 && lat < 38 && lon >= -90 && lon <= -75) {
+      return { sector: 'se', name: 'Southeast', sat: 'GOES19' }
+    }
+
+    // Upper Mississippi Valley: MN, IA, MO, eastern ND/SD/NE
+    if (lat >= 37 && lat <= 50 && lon >= -105 && lon < -88) {
       return { sector: 'umv', name: 'Upper Mississippi Valley', sat: 'GOES19' }
     }
+
+    // Southern Mississippi Valley: AR, LA, MS, western TN
+    if (lat >= 29 && lat < 37 && lon >= -95 && lon < -88) {
+      return { sector: 'smv', name: 'Southern Mississippi Valley', sat: 'GOES19' }
+    }
+
+    // Southern Plains: TX, OK, KS
+    if (lat >= 26 && lat < 40 && lon >= -105 && lon < -93) {
+      return { sector: 'sp', name: 'Southern Plains', sat: 'GOES19' }
+    }
+
+    // Northern Rockies: MT, WY, western ND/SD
+    if (lat >= 42 && lat <= 50 && lon >= -115 && lon < -100) {
+      return { sector: 'nr', name: 'Northern Rockies', sat: 'GOES19' }
+    }
+
+    // Southern Rockies: CO, NM, AZ, UT
+    if (lat >= 31 && lat < 42 && lon >= -115 && lon < -102) {
+      return { sector: 'sr', name: 'Southern Rockies', sat: 'GOES19' }
+    }
+
+    // Gulf of Mexico
+    if (lat < 31 && lon >= -98 && lon <= -80) {
+      return { sector: 'gm', name: 'Gulf of Mexico', sat: 'GOES19' }
+    }
+
+    // Default fallback based on position
+    if (lon > -80) return { sector: 'ne', name: 'Northeast', sat: 'GOES19' }
+    if (lon > -90) return { sector: 'se', name: 'Southeast', sat: 'GOES19' }
+    return { sector: 'sp', name: 'Southern Plains', sat: 'GOES19' }
   }
 
   const { sector, name, sat } = getSector(location.lat, location.lon)
+
+  // URLs for static image and video
+  const latestImageUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/1200x1200.jpg`
+  const videoUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${sat}-${sector.toUpperCase()}-GEOCOLOR-600x600.mp4`
   const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=24`
 
-  // Helper to get day of year
-  const getDayOfYear = (date) => {
-    const start = new Date(date.getUTCFullYear(), 0, 0)
-    const diff = date - start
-    return Math.floor(diff / (1000 * 60 * 60 * 24))
+  // Handle play/pause
+  const togglePlay = () => {
+    if (isPlaying) {
+      setIsPlaying(false)
+      if (videoRef.current) videoRef.current.pause()
+    } else {
+      setIsPlaying(true)
+      if (videoRef.current) videoRef.current.play()
+    }
   }
 
-  // Generate frame URLs based on current time
+  // Preload video when component mounts
   useEffect(() => {
-    const generateFrames = () => {
-      const urls = []
-      const now = new Date()
-      // Round to nearest 5 minutes and go back 20 minutes for availability
-      const minutes = Math.floor(now.getUTCMinutes() / 5) * 5 - 20
-      now.setUTCMinutes(minutes)
-      now.setUTCSeconds(0)
-      now.setUTCMilliseconds(0)
-
-      // Generate 24 frames going back 2 hours
-      for (let i = 23; i >= 0; i--) {
-        const frameTime = new Date(now.getTime() - i * 5 * 60 * 1000)
-        const year = frameTime.getUTCFullYear()
-        const doy = String(getDayOfYear(frameTime)).padStart(3, '0')
-        const hour = String(frameTime.getUTCHours()).padStart(2, '0')
-        const min = String(frameTime.getUTCMinutes()).padStart(2, '0')
-        const timestamp = `${year}${doy}${hour}${min}`
-
-        urls.push({
-          url: `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${timestamp}_${sat}-ABI-${sector}-GEOCOLOR-1200x1200.jpg`,
-          time: frameTime,
-          timestamp
-        })
-      }
-      return urls
-    }
-
-    setLoading(true)
-    const frameUrls = generateFrames()
-    setFrames(frameUrls)
-
-    // Preload frames
-    let loaded = 0
-    frameUrls.forEach(f => {
-      const img = new Image()
-      img.onload = () => {
-        loaded++
-        if (loaded >= 5) setLoading(false)
-      }
-      img.onerror = () => {
-        loaded++
-        if (loaded >= 5) setLoading(false)
-      }
-      img.src = f.url
-    })
-
-    // Timeout fallback
-    setTimeout(() => setLoading(false), 5000)
-
-    // Refresh every 5 minutes
-    const interval = setInterval(() => {
-      const newFrames = generateFrames()
-      setFrames(newFrames)
-    }, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
+    setImageLoaded(false)
+    setVideoLoaded(false)
+    setIsPlaying(false)
   }, [sector, sat])
-
-  // Animate through frames
-  useEffect(() => {
-    if (loading || frames.length === 0) return
-    const interval = setInterval(() => {
-      setCurrentFrame(prev => (prev + 1) % frames.length)
-    }, 150)
-    return () => clearInterval(interval)
-  }, [loading, frames.length])
-
-  // Format time from frame
-  const currentFrameData = frames[currentFrame]
-  const frameTime = currentFrameData?.time
-    ? currentFrameData.time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'
-    : ''
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
       <div className="h-[375px] relative bg-slate-900">
-        {loading ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-            <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
-            <span className="text-slate-400 text-sm">Loading {name} satellite...</span>
-          </div>
-        ) : (
+        {/* Static image (shown by default) */}
+        {!isPlaying && (
           <img
-            src={currentFrameData?.url}
+            src={latestImageUrl}
             alt={`GOES Satellite - ${name}`}
             className="w-full h-full object-cover"
+            onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              // Skip to next frame on error
-              setCurrentFrame(prev => (prev + 1) % frames.length)
+              // Try without cache
+              if (!e.target.src.includes('?')) {
+                e.target.src = latestImageUrl + '?t=' + Date.now()
+              }
             }}
           />
         )}
+
+        {/* Video (shown when playing) */}
+        {isPlaying && (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            className="w-full h-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+            onLoadedData={() => setVideoLoaded(true)}
+            onError={() => {
+              // If video fails, fall back to image
+              setIsPlaying(false)
+            }}
+          />
+        )}
+
+        {/* Loading overlay */}
+        {!imageLoaded && !isPlaying && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900">
+            <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
+            <span className="text-slate-400 text-sm">Loading {name}...</span>
+          </div>
+        )}
+
         {/* Title overlay */}
         <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
           {name}
         </div>
-        {/* Coords */}
+
+        {/* Satellite info */}
         <div className={`absolute top-12 left-3 backdrop-blur-sm px-2 py-1 rounded text-xs z-10 ${isDark ? 'bg-slate-900/60 text-slate-400' : 'bg-white/80 text-slate-500'}`}>
-          {location.lat?.toFixed(1)}°, {location.lon?.toFixed(1)}° • {sat}
+          {sat} • {sector.toUpperCase()}
         </div>
-        {/* Time indicator */}
-        {!loading && (
-          <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
+
+        {/* Play/Pause button */}
+        <button
+          onClick={togglePlay}
+          className={`absolute bottom-3 left-3 backdrop-blur-sm px-4 py-2 rounded-lg text-sm z-10 flex items-center gap-2 transition-all hover:scale-105 ${
+            isPlaying
+              ? 'bg-green-500 text-white'
+              : isDark ? 'bg-slate-900/80 text-slate-300 hover:bg-slate-800' : 'bg-white/90 text-slate-700 hover:bg-white shadow-sm'
+          }`}
+        >
+          {isPlaying ? (
+            <>
+              <Pause className="w-4 h-4" />
+              Playing Loop
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4" />
+              Play 2hr Loop
+            </>
+          )}
+        </button>
+
+        {/* Live indicator (when not playing) */}
+        {!isPlaying && imageLoaded && (
+          <div className={`absolute bottom-3 right-24 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-400' : 'bg-white/90 text-slate-500 shadow-sm'}`}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            {frameTime}
+            Live
           </div>
         )}
-        {/* Progress bar */}
-        {!loading && frames.length > 0 && (
-          <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-            <div
-              className="h-full bg-green-500 transition-all duration-150"
-              style={{ width: `${((currentFrame + 1) / frames.length) * 100}%` }}
-            />
-          </div>
-        )}
+
         {/* Link to NOAA */}
         <a
           href={noaaUrl}
@@ -3178,7 +3200,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.9
+          v1.6.0
         </div>
       </footer>
     </div>
