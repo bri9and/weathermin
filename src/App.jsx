@@ -1985,6 +1985,11 @@ export default function App() {
 
   useEffect(() => {
     fetchWeatherData(location)
+    // Auto-refresh forecast every 15 minutes
+    const interval = setInterval(() => {
+      fetchWeatherData(location)
+    }, 15 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [location, fetchWeatherData])
 
   const handleSearch = async (query) => {
