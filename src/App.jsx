@@ -640,6 +640,82 @@ function MiniRadar({ location }) {
   )
 }
 
+// Compact Hourly Forecast Strip
+function HourlyStrip({ modelData, dailyForecast }) {
+  const isDark = useColorScheme()
+
+  if (!modelData?.hourly) return null
+
+  const hourly = modelData.hourly
+  const now = new Date()
+  const currentHour = now.getHours()
+
+  // Find the starting index for current hour
+  const startIdx = hourly.time.findIndex(t => {
+    const hour = new Date(t).getHours()
+    const date = new Date(t).toDateString()
+    return hour >= currentHour && date === now.toDateString()
+  }) || 0
+
+  // Get next 24 hours
+  const hours = hourly.time.slice(startIdx, startIdx + 24)
+
+  // Get today's high/low from daily forecast
+  const todayHigh = dailyForecast?.daily?.temperature_2m_max?.[0]
+  const todayLow = dailyForecast?.daily?.temperature_2m_min?.[0]
+
+  return (
+    <Card className="mb-6 p-0 overflow-hidden">
+      <div className="px-4 py-3 border-b border-blue-100 dark:border-slate-700 flex items-center justify-between">
+        <h3 className="text-slate-800 dark:text-slate-200 font-bold flex items-center gap-2">
+          <Clock className="w-4 h-4 text-blue-500" />
+          Next 24 Hours
+        </h3>
+        {todayHigh !== undefined && todayLow !== undefined && (
+          <div className="text-sm">
+            <span className="text-rose-500 font-semibold">{Math.round(todayHigh)}°</span>
+            <span className="text-slate-400 mx-1">/</span>
+            <span className="text-blue-500 font-semibold">{Math.round(todayLow)}°</span>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <div className="flex" style={{ minWidth: 'max-content' }}>
+          {hours.map((timeStr, i) => {
+            const idx = startIdx + i
+            const time = new Date(timeStr)
+            const hour = time.getHours()
+            const isNow = i === 0
+            const temp = Math.round(hourly.temperature_2m[idx])
+            const weatherCode = hourly.weather_code[idx]
+            const Icon = getWeatherIconFromCode(weatherCode)
+            const precip = hourly.precipitation_probability[idx]
+            const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+
+            return (
+              <div
+                key={i}
+                className={`flex flex-col items-center py-3 px-3 border-r border-blue-50 dark:border-slate-700/30 last:border-r-0 min-w-[56px] ${
+                  isNow ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                }`}
+              >
+                <div className={`text-xs font-medium ${isNow ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  {isNow ? 'Now' : hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
+                </div>
+                <Icon className={`w-6 h-6 my-1 ${isSnowy ? 'text-blue-400' : hour >= 6 && hour < 20 ? 'text-amber-400' : 'text-slate-400'}`} />
+                <div className="text-sm font-bold text-slate-800 dark:text-white">{temp}°</div>
+                {precip > 20 && (
+                  <div className="text-xs text-blue-500">{precip}%</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 // Friendly Daily Weather Greeting
 function DailyGreeting({ modelData, dailyForecast, airQuality }) {
   const greeting = useMemo(() => {
@@ -2188,6 +2264,9 @@ export default function App() {
 
         {/* Weather Alerts - Below Radar */}
         <AlertBanner alerts={alerts} />
+
+        {/* Hourly Forecast Strip */}
+        <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
         {/* 10-Day Forecast Strip */}
         {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
