@@ -714,15 +714,15 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   const uvInfo = getUvLabel(uvIndex)
 
   const StatRow = ({ label, value, unit = '', className = '' }) => (
-    <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
-      <span className="text-slate-600 dark:text-slate-400">{label}</span>
-      <span className={`font-semibold text-slate-800 dark:text-white text-lg ${className}`}>{value}{unit}</span>
+    <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+      <span className="text-slate-600 dark:text-slate-400 text-sm">{label}</span>
+      <span className={`font-semibold text-slate-800 dark:text-white ${className}`}>{value}{unit}</span>
     </div>
   )
 
   return (
-    <Card className="h-[375px] flex flex-col justify-between p-4 overflow-hidden">
-      <StatRow label="Current" value={currentTemp} unit="°" className="text-slate-800 dark:text-white" />
+    <Card className="h-[375px] flex flex-col justify-between p-3 overflow-hidden">
+      <StatRow label="Current" value={currentTemp} unit="°" />
       <StatRow label="Feels Like" value={feelsLike} unit="°" />
       <StatRow label="High" value={high} unit="°" className="text-rose-500" />
       <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
@@ -2490,7 +2490,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.1.3
+          v1.1.4
         </div>
       </footer>
     </div>
