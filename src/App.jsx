@@ -1157,70 +1157,6 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
       {/* Conditions Card */}
       <ConditionsCard modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
 
-      {/* 10-Day Forecast */}
-      <div>
-        <h3 className="text-slate-700 dark:text-slate-200 font-medium mb-3 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-sky-500" />
-          10-Day Forecast
-        </h3>
-        <div className="grid gap-2">
-          {daily.time.map((dateStr, i) => {
-            const date = new Date(dateStr + 'T00:00:00') // Parse as local time
-            const weatherCode = daily.weather_code[i]
-            const Icon = getWeatherIconFromCode(weatherCode)
-            const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
-            const snowfall = daily.snowfall_sum[i] / 2.54 // Convert cm to inches
-            const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' :
-              date.toLocaleDateString('en-US', { weekday: 'short' })
-            const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
-            return (
-              <Card key={i} className={`flex items-center gap-3 ${snowfall > 0 ? 'border-sky-400 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/5' : ''}`}>
-                <div className="w-24 shrink-0">
-                  <div className="text-slate-700 dark:text-slate-200 font-medium">{dayName}</div>
-                  <div className="text-xs text-slate-500">{fullDate}</div>
-                </div>
-                <Icon className={`w-7 h-7 shrink-0 ${isSnowy ? 'text-sky-400 dark:text-sky-300' : 'text-amber-500 dark:text-amber-400'}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-light text-slate-800 dark:text-white">{Math.round(daily.temperature_2m_max[i])}°</span>
-                    <span className="text-slate-400 dark:text-slate-500">/</span>
-                    <span className="text-slate-500 dark:text-slate-400">{Math.round(daily.temperature_2m_min[i])}°</span>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{getWeatherDescription(weatherCode)}</p>
-                </div>
-                {/* Snow indicator */}
-                {snowfall > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-sky-100 dark:bg-sky-500/20 rounded-lg shrink-0">
-                    <Snowflake className="w-4 h-4 text-sky-500 dark:text-sky-300" />
-                    <span className="text-sky-600 dark:text-sky-200 font-medium">{snowfall.toFixed(1)}"</span>
-                  </div>
-                )}
-                {/* Precip probability */}
-                {daily.precipitation_probability_max[i] > 0 && !snowfall && (
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 shrink-0">
-                    <Droplets className="w-4 h-4" />
-                    <span className="text-sm">{daily.precipitation_probability_max[i]}%</span>
-                  </div>
-                )}
-                {/* Wind */}
-                <div className="text-right shrink-0 hidden sm:block">
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                    <Wind className="w-4 h-4" />
-                    <span className="text-sm">{Math.round(daily.wind_speed_10m_max[i])} mph</span>
-                  </div>
-                  {daily.wind_gusts_10m_max[i] > daily.wind_speed_10m_max[i] + 10 && (
-                    <div className="text-xs text-slate-500">
-                      Gusts {Math.round(daily.wind_gusts_10m_max[i])} mph
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Snow Summary */}
       {daily.snowfall_sum.some(s => s > 0) && (
         <Card className="border-sky-400 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/5">
@@ -2489,7 +2425,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.2.1
+          v1.2.2
         </div>
       </footer>
     </div>
