@@ -721,16 +721,16 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   )
 
   return (
-    <Card className="h-[375px] flex flex-col justify-between p-4">
+    <Card className="h-[375px] flex flex-col justify-between p-4 overflow-hidden">
       <StatRow label="Current" value={currentTemp} unit="°" className="text-slate-800 dark:text-white" />
       <StatRow label="Feels Like" value={feelsLike} unit="°" />
       <StatRow label="High" value={high} unit="°" className="text-rose-500" />
       <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
       <StatRow label="Humidity" value={humidity} unit="%" />
       <StatRow label="Wind" value={windSpeed} unit=" mph" />
-      <StatRow label="Precip Chance" value={precip} unit="%" />
-      <StatRow label="UV Index" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
-      <StatRow label="Air Quality" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
+      <StatRow label="Precip" value={precip} unit="%" />
+      <StatRow label="UV" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
+      <StatRow label="AQI" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
     </Card>
   )
 }
@@ -2490,7 +2490,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.1.2
+          v1.1.3
         </div>
       </footer>
     </div>
