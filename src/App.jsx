@@ -826,22 +826,43 @@ function HourlyStrip({ modelData, dailyForecast }) {
   const todayHigh = dailyForecast?.daily?.temperature_2m_max?.[0]
   const todayLow = dailyForecast?.daily?.temperature_2m_min?.[0]
 
+  // Calculate temp range for gradient coloring
+  const temps = hours.map((_, i) => hourly.temperature_2m[startIdx + i])
+  const minTemp = Math.min(...temps)
+  const maxTemp = Math.max(...temps)
+  const tempRange = maxTemp - minTemp || 1
+
+  // Get temp color based on value
+  const getTempColor = (temp) => {
+    if (temp <= 32) return 'from-blue-500 to-blue-400'
+    if (temp <= 50) return 'from-cyan-500 to-cyan-400'
+    if (temp <= 65) return 'from-emerald-500 to-emerald-400'
+    if (temp <= 75) return 'from-yellow-500 to-yellow-400'
+    if (temp <= 85) return 'from-orange-500 to-orange-400'
+    return 'from-red-500 to-red-400'
+  }
+
   return (
     <Card className="mb-6 p-0 overflow-hidden">
-      <div className="px-4 py-3 border-b border-blue-100 dark:border-slate-700 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-slate-800">
         <h3 className="text-slate-800 dark:text-slate-200 font-bold flex items-center gap-2">
           <Clock className="w-4 h-4 text-blue-500" />
           Next 24 Hours
         </h3>
         {todayHigh !== undefined && todayLow !== undefined && (
-          <div className="text-sm">
-            <span className="text-rose-500 font-semibold">{Math.round(todayHigh)}°</span>
-            <span className="text-slate-400 mx-1">/</span>
-            <span className="text-blue-500 font-semibold">{Math.round(todayLow)}°</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+              <span className="text-rose-500 font-bold">{Math.round(todayHigh)}°</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span className="text-blue-500 font-bold">{Math.round(todayLow)}°</span>
+            </span>
           </div>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-thin">
         <div className="flex" style={{ minWidth: 'max-content' }}>
           {hours.map((timeStr, i) => {
             const idx = startIdx + i
@@ -853,21 +874,50 @@ function HourlyStrip({ modelData, dailyForecast }) {
             const Icon = getWeatherIconFromCode(weatherCode)
             const precip = hourly.precipitation_probability[idx]
             const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+            const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode)
+            const isNight = hour < 6 || hour >= 20
+            const tempHeight = ((temp - minTemp) / tempRange) * 30 + 20 // 20-50px range
 
             return (
               <div
                 key={i}
-                className={`flex flex-col items-center py-3 px-3 border-r border-blue-50 dark:border-slate-700/30 last:border-r-0 min-w-[56px] ${
-                  isNow ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                className={`flex flex-col items-center py-3 px-2 min-w-[64px] transition-all ${
+                  isNow
+                    ? 'bg-gradient-to-b from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border-x-2 border-blue-400'
+                    : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'
                 }`}
               >
-                <div className={`text-xs font-medium ${isNow ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                  {isNow ? 'Now' : hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
+                {/* Time */}
+                <div className={`text-xs font-bold mb-2 ${isNow ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  {isNow ? 'NOW' : hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                 </div>
-                <Icon className={`w-6 h-6 my-1 ${isSnowy ? 'text-blue-400' : hour >= 6 && hour < 20 ? 'text-amber-400' : 'text-slate-400'}`} />
-                <div className="text-sm font-bold text-slate-800 dark:text-white">{temp}°</div>
+
+                {/* Weather Icon */}
+                <div className={`p-1.5 rounded-full mb-2 ${
+                  isSnowy ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  isRainy ? 'bg-slate-100 dark:bg-slate-700/50' :
+                  isNight ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                  'bg-amber-100 dark:bg-amber-900/30'
+                }`}>
+                  <Icon className={`w-5 h-5 ${
+                    isSnowy ? 'text-blue-500' :
+                    isRainy ? 'text-slate-500 dark:text-slate-400' :
+                    isNight ? 'text-indigo-400' :
+                    'text-amber-500'
+                  }`} />
+                </div>
+
+                {/* Temperature pill */}
+                <div className={`bg-gradient-to-r ${getTempColor(temp)} text-white text-sm font-bold px-2.5 py-1 rounded-full shadow-sm`}>
+                  {temp}°
+                </div>
+
+                {/* Precipitation */}
                 {precip > 20 && (
-                  <div className="text-xs text-blue-500">{precip}%</div>
+                  <div className="flex items-center gap-0.5 mt-2">
+                    <Droplets className="w-3 h-3 text-blue-500" />
+                    <span className="text-xs font-semibold text-blue-500">{precip}%</span>
+                  </div>
                 )}
               </div>
             )
@@ -2493,7 +2543,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.2.4
+          v1.2.5
         </div>
       </footer>
     </div>
