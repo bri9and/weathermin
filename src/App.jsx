@@ -734,87 +734,136 @@ function SatelliteLoop({ location }) {
   const [frames, setFrames] = useState([])
   const [currentFrame, setCurrentFrame] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  // Map lat/lon to GOES satellite and sector
+  // Map lat/lon to GOES satellite and sector (uppercase for NOAA CDN)
   const getSatelliteSector = (lat, lon) => {
     // GOES-West (GOES18) for western US, GOES-East (GOES16) for eastern
     const isWest = lon < -105
 
     if (isWest) {
       // Western US - GOES-West (GOES18)
-      if (lat > 48) return { sat: 'GOES18', sector: 'pnw', name: 'Pacific Northwest' }
-      if (lat > 42 && lon < -115) return { sat: 'GOES18', sector: 'pnw', name: 'Pacific Northwest' }
-      if (lat > 35) return { sat: 'GOES18', sector: 'psw', name: 'Pacific Southwest' }
-      return { sat: 'GOES18', sector: 'psw', name: 'Pacific Southwest' }
+      if (lat > 45) return { sat: 'GOES18', sector: 'PNW', name: 'Pacific Northwest' }
+      if (lat > 32) return { sat: 'GOES18', sector: 'PSW', name: 'Pacific Southwest' }
+      return { sat: 'GOES18', sector: 'SW', name: 'Southwest' }
     } else {
       // Eastern US - GOES-East (GOES16)
-      if (lat > 42 && lon > -90) return { sat: 'GOES16', sector: 'cgl', name: 'Great Lakes' }
-      if (lat > 42 && lon <= -90) return { sat: 'GOES16', sector: 'umv', name: 'Upper Mississippi Valley' }
-      if (lat > 37 && lon > -80) return { sat: 'GOES16', sector: 'ne', name: 'Northeast' }
-      if (lat > 37 && lon > -95) return { sat: 'GOES16', sector: 'umv', name: 'Upper Mississippi Valley' }
-      if (lat > 30 && lon > -90) return { sat: 'GOES16', sector: 'se', name: 'Southeast' }
-      if (lat > 30 && lon > -100) return { sat: 'GOES16', sector: 'sp', name: 'Southern Plains' }
-      if (lon > -85) return { sat: 'GOES16', sector: 'se', name: 'Southeast' }
-      return { sat: 'GOES16', sector: 'gm', name: 'Gulf of Mexico' }
+      // Great Lakes: roughly 41-49°N, 82-93°W
+      if (lat >= 41 && lat <= 49 && lon >= -93 && lon <= -75) {
+        return { sat: 'GOES16', sector: 'CGL', name: 'Great Lakes' }
+      }
+      // Northeast: roughly 37-47°N, 67-80°W
+      if (lat >= 37 && lat <= 47 && lon >= -80 && lon <= -67) {
+        return { sat: 'GOES16', sector: 'NE', name: 'Northeast' }
+      }
+      // Southeast: roughly 24-37°N, 75-90°W
+      if (lat >= 24 && lat < 37 && lon >= -90 && lon <= -75) {
+        return { sat: 'GOES16', sector: 'SE', name: 'Southeast' }
+      }
+      // Southern Plains: roughly 26-37°N, 93-105°W
+      if (lat >= 26 && lat < 37 && lon >= -105 && lon < -93) {
+        return { sat: 'GOES16', sector: 'SP', name: 'Southern Plains' }
+      }
+      // Upper Mississippi Valley: roughly 37-49°N, 88-105°W
+      if (lat >= 37 && lat <= 49 && lon >= -105 && lon < -88) {
+        return { sat: 'GOES16', sector: 'UMV', name: 'Upper Mississippi Valley' }
+      }
+      // Gulf of Mexico
+      if (lat < 30 && lon >= -98 && lon <= -80) {
+        return { sat: 'GOES16', sector: 'GMX', name: 'Gulf of Mexico' }
+      }
+      // Default to CONUS (full continental US view)
+      return { sat: 'GOES16', sector: 'CONUS', name: 'Continental US' }
     }
   }
 
   const { sat, sector, name } = getSatelliteSector(location.lat, location.lon)
 
-  // Generate frame URLs for last 2 hours (24 frames at 5-min intervals)
+  // Debug: log location detection
+  console.log('SatelliteLoop location:', location.lat, location.lon, '->', sat, sector, name)
+
+  // Fetch available frames from NOAA - they provide a JSON with available timestamps
   useEffect(() => {
-    const generateFrameUrls = () => {
-      const urls = []
-      const now = new Date()
-      // Round down to nearest 5 minutes, then go back 10 minutes to ensure images exist
-      now.setMinutes(Math.floor(now.getMinutes() / 5) * 5 - 10)
-      now.setSeconds(0)
-      now.setMilliseconds(0)
+    const fetchFrames = async () => {
+      setLoading(true)
+      setError(false)
 
-      // Generate 24 frames going back 2 hours
-      for (let i = 23; i >= 0; i--) {
-        const frameTime = new Date(now.getTime() - i * 5 * 60 * 1000)
-        const year = frameTime.getUTCFullYear()
-        const month = String(frameTime.getUTCMonth() + 1).padStart(2, '0')
-        const day = String(frameTime.getUTCDate()).padStart(2, '0')
-        const hour = String(frameTime.getUTCHours()).padStart(2, '0')
-        const minute = String(frameTime.getUTCMinutes()).padStart(2, '0')
-        const timestamp = `${year}${month}${day}${hour}${minute}`
+      try {
+        // Try to get the latest image first to verify the URL works
+        const latestUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/latest.jpg`
 
+        // Generate frame URLs based on recent timestamps
+        // NOAA images are typically available every 5-10 minutes
+        const urls = []
+        const now = new Date()
+        // Round down to nearest 10 minutes and go back 20 minutes to ensure availability
+        now.setMinutes(Math.floor(now.getMinutes() / 10) * 10 - 20)
+        now.setSeconds(0)
+        now.setMilliseconds(0)
+
+        // Generate 12 frames going back 2 hours (10-min intervals)
+        for (let i = 11; i >= 0; i--) {
+          const frameTime = new Date(now.getTime() - i * 10 * 60 * 1000)
+          const year = frameTime.getUTCFullYear()
+          const month = String(frameTime.getUTCMonth() + 1).padStart(2, '0')
+          const day = String(frameTime.getUTCDate()).padStart(2, '0')
+          const hour = String(frameTime.getUTCHours()).padStart(2, '0')
+          const minute = String(frameTime.getUTCMinutes()).padStart(2, '0')
+          const timestamp = `${year}${month}${day}${hour}${minute}`
+
+          urls.push({
+            url: `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${timestamp}_${sat}-ABI-${sector}-GEOCOLOR-1200x1200.jpg`,
+            time: frameTime
+          })
+        }
+
+        // Add the latest image as the final frame
         urls.push({
-          url: `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${timestamp}_${sat}-ABI-${sector}-GEOCOLOR-1200x1200.jpg`,
-          time: frameTime
+          url: latestUrl,
+          time: new Date()
         })
+
+        setFrames(urls)
+
+        // Preload first few images
+        let loadedCount = 0
+        let errorCount = 0
+        const imagesToLoad = urls.slice(-5) // Load last 5 frames first
+
+        imagesToLoad.forEach(frame => {
+          const img = new Image()
+          img.onload = () => {
+            loadedCount++
+            if (loadedCount >= 2) {
+              setLoading(false)
+            }
+          }
+          img.onerror = () => {
+            errorCount++
+            if (errorCount >= imagesToLoad.length) {
+              setError(true)
+              setLoading(false)
+            }
+          }
+          img.src = frame.url
+        })
+
+        // Timeout fallback
+        setTimeout(() => {
+          if (loading) setLoading(false)
+        }, 5000)
+
+      } catch (err) {
+        console.error('Failed to load satellite frames:', err)
+        setError(true)
+        setLoading(false)
       }
-      return urls
     }
 
-    const frameUrls = generateFrameUrls()
-    setFrames(frameUrls)
-
-    // Preload images
-    let loadedCount = 0
-    frameUrls.forEach(frame => {
-      const img = new Image()
-      img.onload = () => {
-        loadedCount++
-        if (loadedCount >= frameUrls.length / 2) {
-          setLoading(false)
-        }
-      }
-      img.onerror = () => {
-        loadedCount++
-        if (loadedCount >= frameUrls.length / 2) {
-          setLoading(false)
-        }
-      }
-      img.src = frame.url
-    })
+    fetchFrames()
 
     // Refresh frame list every 5 minutes
-    const refreshInterval = setInterval(() => {
-      setFrames(generateFrameUrls())
-    }, 5 * 60 * 1000)
+    const refreshInterval = setInterval(fetchFrames, 5 * 60 * 1000)
 
     return () => clearInterval(refreshInterval)
   }, [sat, sector])
@@ -841,32 +890,60 @@ function SatelliteLoop({ location }) {
     <Card className="p-0 overflow-hidden rounded-xl">
       <div className="h-[375px] relative bg-slate-900">
         {loading ? (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
             <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
+            <span className="text-slate-400 text-sm">Loading {name} satellite...</span>
+          </div>
+        ) : error ? (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <AlertTriangle className="w-8 h-8 text-amber-400" />
+            <span className="text-slate-300 text-sm">Unable to load satellite imagery</span>
+            <a
+              href={noaaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 text-sm hover:underline flex items-center gap-1"
+            >
+              View on NOAA <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         ) : (
           <img
             src={currentFrameData?.url}
             alt={`GOES Satellite - ${name}`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // Try latest.jpg as fallback
+              if (!e.target.src.includes('latest.jpg')) {
+                e.target.src = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/latest.jpg`
+              }
+            }}
           />
         )}
         {/* Title overlay */}
         <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
-          Satellite
+          {sat} • {sector}
+        </div>
+        {/* Location debug */}
+        <div className={`absolute top-12 left-3 backdrop-blur-sm px-2 py-1 rounded text-xs z-10 ${isDark ? 'bg-slate-900/60 text-slate-400' : 'bg-white/80 text-slate-500'}`}>
+          {location.lat?.toFixed(2)}°N, {Math.abs(location.lon)?.toFixed(2)}°W
         </div>
         {/* Time indicator */}
-        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          {frameTime} • {name}
-        </div>
+        {!loading && !error && (
+          <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            {frameTime} • {name}
+          </div>
+        )}
         {/* Progress bar */}
-        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
-          <div
-            className="h-full bg-green-500 transition-all duration-200"
-            style={{ width: `${((currentFrame + 1) / frames.length) * 100}%` }}
-          />
-        </div>
+        {!loading && !error && frames.length > 0 && (
+          <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+            <div
+              className="h-full bg-green-500 transition-all duration-200"
+              style={{ width: `${((currentFrame + 1) / frames.length) * 100}%` }}
+            />
+          </div>
+        )}
         {/* Link to NOAA */}
         <a
           href={noaaUrl}
@@ -3149,7 +3226,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.4
+          v1.5.5
         </div>
       </footer>
     </div>
