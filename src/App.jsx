@@ -816,13 +816,14 @@ function TenDayStrip({ dailyForecast }) {
       </div>
       <div className="overflow-x-auto">
         <div className="flex sm:grid sm:grid-cols-10" style={{ minWidth: 'max-content' }}>
-          {daily.time.slice(0, 10).map((date, i) => {
+          {daily.time.slice(0, 10).map((dateStr, i) => {
+            const date = new Date(dateStr + 'T00:00:00') // Parse as local time to avoid timezone shift
             const weatherCode = daily.weather_code[i]
             const Icon = getWeatherIconFromCode(weatherCode)
             const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
             const snowfall = daily.snowfall_sum[i] / 2.54
-            const dayName = i === 0 ? 'Today' : new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
-            const dayNum = new Date(date).getDate()
+            const dayName = i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' })
+            const dayNum = date.getDate()
 
             return (
               <div
@@ -984,14 +985,15 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
           10-Day Forecast
         </h3>
         <div className="grid gap-2">
-          {daily.time.map((date, i) => {
+          {daily.time.map((dateStr, i) => {
+            const date = new Date(dateStr + 'T00:00:00') // Parse as local time
             const weatherCode = daily.weather_code[i]
             const Icon = getWeatherIconFromCode(weatherCode)
             const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
             const snowfall = daily.snowfall_sum[i] / 2.54 // Convert cm to inches
             const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' :
-              new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
-            const fullDate = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              date.toLocaleDateString('en-US', { weekday: 'short' })
+            const fullDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
             return (
               <Card key={i} className={`flex items-center gap-3 ${snowfall > 0 ? 'border-sky-400 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/5' : ''}`}>
@@ -1048,12 +1050,13 @@ function ForecastTab({ forecast, dailyForecast, location, modelData, airQuality 
             Snow Forecast
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {daily.time.map((date, i) => {
+            {daily.time.map((dateStr, i) => {
               const snowCm = daily.snowfall_sum[i]
               if (snowCm === 0) return null
+              const date = new Date(dateStr + 'T00:00:00') // Parse as local time
               const snow = snowCm / 2.54 // Convert cm to inches
               const dayName = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' :
-                new Date(date).toLocaleDateString('en-US', { weekday: 'short' })
+                date.toLocaleDateString('en-US', { weekday: 'short' })
               return (
                 <div key={i} className="text-center">
                   <div className="text-slate-500 dark:text-slate-400 text-sm">{dayName}</div>
@@ -1407,14 +1410,15 @@ function ModelsTab({ modelData, location }) {
                 </tr>
               </thead>
               <tbody>
-                {daily.time.map((date, i) => {
+                {daily.time.map((dateStr, i) => {
+                  const date = new Date(dateStr + 'T00:00:00') // Parse as local time
                   const snowCm = daily.snowfall_sum[i]
                   const snow = snowCm / 2.54 // Convert cm to inches
                   const precip = daily.precipitation_sum[i]
                   return (
                     <tr key={i} className={`border-t border-slate-700/50 ${snow > 0.05 ? 'bg-sky-500/5' : ''}`}>
                       <td className="py-2 pr-4 text-slate-300">
-                        {i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </td>
                       <td className="text-right py-2 px-2 text-rose-400">{Math.round(daily.temperature_2m_max[i])}°</td>
                       <td className="text-right py-2 px-2 text-sky-400">{Math.round(daily.temperature_2m_min[i])}°</td>
