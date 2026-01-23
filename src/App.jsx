@@ -728,77 +728,81 @@ function MiniRadar({ location }) {
   )
 }
 
-// GOES Satellite Loop - shows latest satellite image for user's region
+// GOES Satellite Loop - animated satellite imagery from local frames
 function SatelliteLoop({ location }) {
   const isDark = useColorScheme()
+  const [currentFrame, setCurrentFrame] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [imageUrl, setImageUrl] = useState('')
 
-  // Map lat/lon to GOES satellite and sector
-  const getSatelliteSector = (lat, lon) => {
-    const isWest = lon < -105
+  // Local satellite frames (downloaded from NOAA)
+  const frames = [
+    '/satellite/20260232106_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232111_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232116_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232121_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232126_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232131_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232136_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232141_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232146_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232151_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232156_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232201_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232206_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232211_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232216_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232221_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232226_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232231_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232236_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232241_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232246_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232251_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232256_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+    '/satellite/20260232301_GOES19-ABI-umv-GEOCOLOR-1200x1200.jpg',
+  ]
 
-    if (isWest) {
-      if (lat > 45) return { sat: 'GOES18', sector: 'pnw', name: 'Pacific Northwest' }
-      if (lat > 32) return { sat: 'GOES18', sector: 'psw', name: 'Pacific Southwest' }
-      return { sat: 'GOES18', sector: 'sw', name: 'Southwest' }
-    } else {
-      if (lat >= 41 && lat <= 49 && lon >= -93 && lon <= -75) {
-        return { sat: 'GOES16', sector: 'cgl', name: 'Great Lakes' }
+  const name = 'Upper Mississippi Valley'
+  const noaaUrl = 'https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=G19&sector=umv&band=GEOCOLOR&length=24'
+
+  // Preload all frames
+  useEffect(() => {
+    let loadedCount = 0
+    frames.forEach(src => {
+      const img = new Image()
+      img.onload = () => {
+        loadedCount++
+        if (loadedCount >= 3) setLoading(false)
       }
-      if (lat >= 37 && lat <= 47 && lon >= -80 && lon <= -67) {
-        return { sat: 'GOES16', sector: 'ne', name: 'Northeast' }
-      }
-      if (lat >= 24 && lat < 37 && lon >= -90 && lon <= -75) {
-        return { sat: 'GOES16', sector: 'se', name: 'Southeast' }
-      }
-      if (lat >= 26 && lat < 37 && lon >= -105 && lon < -93) {
-        return { sat: 'GOES16', sector: 'sp', name: 'Southern Plains' }
-      }
-      if (lat >= 37 && lat <= 49 && lon >= -105 && lon < -88) {
-        return { sat: 'GOES16', sector: 'umv', name: 'Upper Mississippi Valley' }
-      }
-      if (lat < 30 && lon >= -98 && lon <= -80) {
-        return { sat: 'GOES16', sector: 'gm', name: 'Gulf of Mexico' }
-      }
-      return { sat: 'GOES16', sector: 'conus', name: 'Continental US' }
+      img.src = src
+    })
+    // Fallback timeout
+    setTimeout(() => setLoading(false), 3000)
+  }, [])
+
+  // Animate through frames
+  useEffect(() => {
+    if (loading) return
+    const interval = setInterval(() => {
+      setCurrentFrame(prev => (prev + 1) % frames.length)
+    }, 150) // 150ms per frame for smooth animation
+    return () => clearInterval(interval)
+  }, [loading, frames.length])
+
+  // Get time from filename (format: YYYYDDDHHMI)
+  const getTimeFromFrame = (frame) => {
+    const match = frame.match(/(\d{4})(\d{3})(\d{2})(\d{2})_/)
+    if (match) {
+      const hour = parseInt(match[3])
+      const minute = match[4]
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const hour12 = hour % 12 || 12
+      return `${hour12}:${minute} ${ampm} UTC`
     }
+    return ''
   }
 
-  const { sat, sector, name } = getSatelliteSector(location.lat, location.lon)
-
-  // Use the latest.jpg endpoint - always available
-  const latestUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/latest.jpg`
-
-  // Link to full NOAA page
-  const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=24`
-
-  useEffect(() => {
-    setLoading(true)
-    setError(false)
-    setImageUrl(latestUrl)
-
-    // Preload the image
-    const img = new Image()
-    img.onload = () => {
-      setLoading(false)
-      console.log('Satellite image loaded:', latestUrl)
-    }
-    img.onerror = () => {
-      console.error('Failed to load satellite image:', latestUrl)
-      setError(true)
-      setLoading(false)
-    }
-    img.src = latestUrl
-
-    // Refresh every 5 minutes
-    const interval = setInterval(() => {
-      setImageUrl(latestUrl + '?t=' + Date.now())
-    }, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [latestUrl])
+  const frameTime = getTimeFromFrame(frames[currentFrame])
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
@@ -806,42 +810,33 @@ function SatelliteLoop({ location }) {
         {loading ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-3">
             <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
-            <span className="text-slate-400 text-sm">Loading {name} satellite...</span>
-          </div>
-        ) : error ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
-            <AlertTriangle className="w-8 h-8 text-amber-400" />
-            <span className="text-slate-300 text-sm">Unable to load satellite imagery</span>
-            <span className="text-slate-500 text-xs break-all px-4">{latestUrl}</span>
-            <a
-              href={noaaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 text-sm hover:underline flex items-center gap-1"
-            >
-              View on NOAA <ExternalLink className="w-3 h-3" />
-            </a>
+            <span className="text-slate-400 text-sm">Loading satellite loop...</span>
           </div>
         ) : (
           <img
-            src={imageUrl}
+            src={frames[currentFrame]}
             alt={`GOES Satellite - ${name}`}
             className="w-full h-full object-cover"
           />
         )}
         {/* Title overlay */}
         <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
-          {name}
+          Satellite Loop
         </div>
-        {/* Satellite info */}
-        <div className={`absolute top-12 left-3 backdrop-blur-sm px-2 py-1 rounded text-xs z-10 ${isDark ? 'bg-slate-900/60 text-slate-400' : 'bg-white/80 text-slate-500'}`}>
-          {sat} • {sector.toUpperCase()} • {location.lat?.toFixed(1)}°, {location.lon?.toFixed(1)}°
-        </div>
-        {/* Live indicator */}
-        {!loading && !error && (
+        {/* Time indicator */}
+        {!loading && (
           <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Live • {name}
+            {frameTime} • {name}
+          </div>
+        )}
+        {/* Progress bar */}
+        {!loading && (
+          <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+            <div
+              className="h-full bg-green-500 transition-all duration-150"
+              style={{ width: `${((currentFrame + 1) / frames.length) * 100}%` }}
+            />
           </div>
         )}
         {/* Link to NOAA */}
@@ -3126,7 +3121,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.7
+          v1.5.8
         </div>
       </footer>
     </div>
