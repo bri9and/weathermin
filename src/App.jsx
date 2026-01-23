@@ -728,6 +728,74 @@ function MiniRadar({ location }) {
   )
 }
 
+// GOES Satellite Loop - animated GIF for user's region
+function SatelliteLoop({ location }) {
+  const isDark = useColorScheme()
+
+  // Map lat/lon to GOES satellite and sector
+  const getSatelliteSector = (lat, lon) => {
+    // GOES-West (GOES18/19) for western US, GOES-East (GOES16) for eastern
+    const isWest = lon < -105
+
+    if (isWest) {
+      // Western US - GOES-West (GOES18)
+      if (lat > 48) return { sat: 'GOES18', sector: 'pnw', name: 'Pacific Northwest' }
+      if (lat > 42 && lon < -115) return { sat: 'GOES18', sector: 'pnw', name: 'Pacific Northwest' }
+      if (lat > 35) return { sat: 'GOES18', sector: 'psw', name: 'Pacific Southwest' }
+      return { sat: 'GOES18', sector: 'psw', name: 'Pacific Southwest' }
+    } else {
+      // Eastern US - GOES-East (GOES16)
+      if (lat > 42 && lon > -90) return { sat: 'GOES16', sector: 'cgl', name: 'Great Lakes' }
+      if (lat > 42 && lon <= -90) return { sat: 'GOES16', sector: 'umv', name: 'Upper Mississippi Valley' }
+      if (lat > 37 && lon > -80) return { sat: 'GOES16', sector: 'ne', name: 'Northeast' }
+      if (lat > 37 && lon > -95) return { sat: 'GOES16', sector: 'umv', name: 'Upper Mississippi Valley' }
+      if (lat > 30 && lon > -90) return { sat: 'GOES16', sector: 'se', name: 'Southeast' }
+      if (lat > 30 && lon > -100) return { sat: 'GOES16', sector: 'sp', name: 'Southern Plains' }
+      if (lon > -85) return { sat: 'GOES16', sector: 'se', name: 'Southeast' }
+      return { sat: 'GOES16', sector: 'gm', name: 'Gulf of Mexico' }
+    }
+  }
+
+  const { sat, sector, name } = getSatelliteSector(location.lat, location.lon)
+  const sectorUpper = sector.toUpperCase()
+
+  // Animated GIF URL
+  const gifUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${sat}-${sectorUpper}-GEOCOLOR-1000x1000.gif`
+
+  // Link to full NOAA page
+  const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=24`
+
+  return (
+    <Card className="p-0 overflow-hidden rounded-xl">
+      <div className="h-[375px] relative bg-slate-900">
+        <img
+          src={gifUrl}
+          alt={`GOES Satellite - ${name}`}
+          className="w-full h-full object-cover"
+        />
+        {/* Title overlay */}
+        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
+          Satellite
+        </div>
+        {/* Info overlay */}
+        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          {name}
+        </div>
+        {/* Link to NOAA */}
+        <a
+          href={noaaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`absolute bottom-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-1 hover:scale-105 transition-transform ${isDark ? 'bg-slate-900/80 text-slate-400 hover:text-white' : 'bg-white/90 text-slate-500 hover:text-slate-800 shadow-sm'}`}
+        >
+          NOAA <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+    </Card>
+  )
+}
+
 // Quick Stats Panel - minimalist weather info
 function QuickStats({ modelData, dailyForecast, airQuality }) {
   const isDark = useColorScheme()
@@ -2922,6 +2990,11 @@ export default function App() {
           <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
         </div>
 
+        {/* Satellite Loop */}
+        <div className="mb-6">
+          <SatelliteLoop location={location} />
+        </div>
+
         {/* Air Quality */}
         <AirQualityCard airQuality={airQuality} />
 
@@ -2970,7 +3043,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.1
+          v1.5.2
         </div>
       </footer>
     </div>
