@@ -88,6 +88,7 @@ const WEATHER_LINKS = {
     { name: 'College of DuPage', url: 'https://weather.cod.edu/satrad/' },
     { name: 'GOES-East Imagery', url: 'https://www.star.nesdis.noaa.gov/GOES/index.php' },
     { name: 'Windy.com', url: 'https://www.windy.com/' },
+    { name: 'Zoom Earth', url: 'https://zoom.earth/' },
   ],
   'Severe Weather': [
     { name: 'SPC Outlooks', url: 'https://www.spc.noaa.gov/' },
@@ -99,6 +100,29 @@ const WEATHER_LINKS = {
     { name: 'MesoWest', url: 'https://mesowest.utah.edu/' },
     { name: 'Weather Underground', url: 'https://www.wunderground.com/' },
     { name: 'ASOS/AWOS Data', url: 'https://www.weather.gov/asos/' },
+  ],
+}
+
+const RAW_DATA_SOURCES = {
+  'Forecast APIs': [
+    { name: 'Open-Meteo (GFS/HRRR)', url: 'https://api.open-meteo.com/v1/gfs' },
+    { name: 'Open-Meteo (Canadian GEM)', url: 'https://api.open-meteo.com/v1/gem' },
+    { name: 'NWS API', url: 'https://api.weather.gov' },
+  ],
+  'Radar & Satellite': [
+    { name: 'RainViewer Radar Tiles', url: 'https://api.rainviewer.com/public/weather-maps.json' },
+    { name: 'GOES-East (NOAA)', url: 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR' },
+    { name: 'GOES-West (NOAA)', url: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR' },
+    { name: 'MRMS Radar (NOAA)', url: 'https://mrms.ncep.noaa.gov/data/' },
+  ],
+  'Air Quality & UV': [
+    { name: 'Open-Meteo Air Quality', url: 'https://air-quality-api.open-meteo.com/v1/air-quality' },
+    { name: 'AirNow API', url: 'https://www.airnowapi.org/' },
+    { name: 'EPA AQS Data', url: 'https://aqs.epa.gov/aqsweb/documents/data_api.html' },
+  ],
+  'Alerts & Warnings': [
+    { name: 'NWS Alerts API', url: 'https://api.weather.gov/alerts/active' },
+    { name: 'NWS CAP Feeds', url: 'https://alerts.weather.gov/' },
   ],
 }
 
@@ -1947,26 +1971,59 @@ function RadarTab({ location, onGeolocate, locating }) {
 
 function LinksTab() {
   return (
-    <div className="grid sm:grid-cols-2 gap-4">
-      {Object.entries(WEATHER_LINKS).map(([category, links]) => (
-        <Card key={category}>
-          <h3 className="text-slate-200 font-medium mb-3">{category}</h3>
-          <div className="space-y-2">
-            {links.map((link) => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-700/50 transition-colors group"
-              >
-                <span className="text-slate-300 group-hover:text-sky-400">{link.name}</span>
-                <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-sky-400" />
-              </a>
-            ))}
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-8">
+      {/* Weather Resources */}
+      <div>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Weather Resources</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {Object.entries(WEATHER_LINKS).map(([category, links]) => (
+            <Card key={category}>
+              <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h3>
+              <div className="space-y-1">
+                {links.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-colors group"
+                  >
+                    <span className="text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-sky-400">{link.name}</span>
+                    <ExternalLink className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-sky-400" />
+                  </a>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Raw Data Sources */}
+      <div>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Raw Data Sources (APIs)</h2>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {Object.entries(RAW_DATA_SOURCES).map(([category, sources]) => (
+            <Card key={category}>
+              <h3 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h3>
+              <div className="space-y-2">
+                {sources.map((source) => (
+                  <div key={source.url} className="text-sm">
+                    <div className="text-slate-700 dark:text-slate-300 font-medium">{source.name}</div>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-sky-400 hover:underline break-all text-xs font-mono"
+                    >
+                      {source.url}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
