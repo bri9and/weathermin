@@ -721,16 +721,18 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   )
 
   return (
-    <Card className="h-[375px] flex flex-col justify-between p-3 overflow-hidden">
-      <StatRow label="Current" value={currentTemp} unit="°" />
-      <StatRow label="Feels Like" value={feelsLike} unit="°" />
-      <StatRow label="High" value={high} unit="°" className="text-rose-500" />
-      <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
-      <StatRow label="Humidity" value={humidity} unit="%" />
-      <StatRow label="Wind" value={windSpeed} unit=" mph" />
-      <StatRow label="Precip" value={precip} unit="%" />
-      <StatRow label="UV" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
-      <StatRow label="AQI" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
+    <Card className="p-0 overflow-hidden rounded-xl">
+      <div className="h-[375px] flex flex-col justify-between p-4">
+        <StatRow label="Current" value={currentTemp} unit="°" />
+        <StatRow label="Feels Like" value={feelsLike} unit="°" />
+        <StatRow label="High" value={high} unit="°" className="text-rose-500" />
+        <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
+        <StatRow label="Humidity" value={humidity} unit="%" />
+        <StatRow label="Wind" value={windSpeed} unit=" mph" />
+        <StatRow label="Precip" value={precip} unit="%" />
+        <StatRow label="UV" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
+        <StatRow label="AQI" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
+      </div>
     </Card>
   )
 }
@@ -2487,7 +2489,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.2.0
+          v1.2.1
         </div>
       </footer>
     </div>
