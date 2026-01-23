@@ -714,30 +714,23 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   const uvInfo = getUvLabel(uvIndex)
 
   const StatRow = ({ label, value, unit = '', className = '' }) => (
-    <div className="flex justify-between items-center py-0.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
-      <span className="text-slate-500 dark:text-slate-400 text-xs">{label}</span>
-      <span className={`font-semibold text-slate-800 dark:text-white text-sm ${className}`}>{value}{unit}</span>
+    <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+      <span className="text-slate-600 dark:text-slate-400">{label}</span>
+      <span className={`font-semibold text-slate-800 dark:text-white text-lg ${className}`}>{value}{unit}</span>
     </div>
   )
 
   return (
-    <Card className="h-[375px] overflow-hidden">
-      {/* Stats Table */}
-      <div>
-        <StatRow label="Current" value={currentTemp} unit="°" className="text-slate-800 dark:text-white" />
-        <StatRow label="Feels Like" value={feelsLike} unit="°" />
-        <StatRow label="High" value={high} unit="°" className="text-rose-500" />
-        <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
-        <StatRow label="Humidity" value={humidity} unit="%" />
-        <StatRow label="Wind" value={windSpeed} unit=" mph" />
-        <StatRow label="Precip Chance" value={precip} unit="%" />
-        {rain > 0 && <StatRow label="Rain" value={rain.toFixed(2)} unit='"' />}
-        {snow > 0.05 && <StatRow label="Snow" value={snow.toFixed(1)} unit='"' className="text-sky-500" />}
-        <StatRow label="UV Index" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
-        <StatRow label="Air Quality" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
-        {visibility && <StatRow label="Visibility" value={visibility} unit=" mi" />}
-        {dewPoint && <StatRow label="Dew Point" value={dewPoint} unit="°" />}
-      </div>
+    <Card className="h-[375px] flex flex-col justify-between p-4">
+      <StatRow label="Current" value={currentTemp} unit="°" className="text-slate-800 dark:text-white" />
+      <StatRow label="Feels Like" value={feelsLike} unit="°" />
+      <StatRow label="High" value={high} unit="°" className="text-rose-500" />
+      <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
+      <StatRow label="Humidity" value={humidity} unit="%" />
+      <StatRow label="Wind" value={windSpeed} unit=" mph" />
+      <StatRow label="Precip Chance" value={precip} unit="%" />
+      <StatRow label="UV Index" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
+      <StatRow label="Air Quality" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
     </Card>
   )
 }
@@ -2497,7 +2490,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.1.1
+          v1.1.2
         </div>
       </footer>
     </div>
