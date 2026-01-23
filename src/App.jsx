@@ -866,16 +866,19 @@ function HourlyStrip({ modelData, dailyForecast }) {
             const temp = Math.round(hourly.temperature_2m[idx])
             const weatherCode = hourly.weather_code[idx]
             const Icon = getWeatherIconFromCode(weatherCode)
-            const precip = hourly.precipitation_probability[idx]
+            const precipProb = hourly.precipitation_probability[idx]
+            const precipitation = hourly.precipitation?.[idx] || 0 // mm
+            const snowfall = hourly.snowfall?.[idx] || 0 // cm
+            const snowInches = snowfall / 2.54 // convert to inches
+            const rainInches = precipitation / 25.4 // convert to inches
             const isSnowy = [71, 73, 75, 77, 85, 86].includes(weatherCode)
             const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(weatherCode)
             const isNight = hour < 6 || hour >= 20
-            const tempHeight = ((temp - minTemp) / tempRange) * 30 + 20 // 20-50px range
 
             return (
               <div
                 key={i}
-                className={`flex flex-col items-center py-3 px-2 min-w-[64px] transition-all ${
+                className={`flex flex-col items-center py-3 px-2 min-w-[68px] transition-all ${
                   isNow
                     ? 'bg-gradient-to-b from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border-x-2 border-blue-400'
                     : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'
@@ -906,11 +909,27 @@ function HourlyStrip({ modelData, dailyForecast }) {
                   {temp}°
                 </div>
 
-                {/* Precipitation */}
-                {precip > 20 && (
+                {/* Snowfall */}
+                {snowInches >= 0.1 && (
+                  <div className="flex items-center gap-0.5 mt-2">
+                    <Snowflake className="w-3 h-3 text-sky-400" />
+                    <span className="text-xs font-semibold text-sky-400">{snowInches.toFixed(1)}"</span>
+                  </div>
+                )}
+
+                {/* Rain */}
+                {rainInches >= 0.01 && !snowInches && (
                   <div className="flex items-center gap-0.5 mt-2">
                     <Droplets className="w-3 h-3 text-blue-500" />
-                    <span className="text-xs font-semibold text-blue-500">{precip}%</span>
+                    <span className="text-xs font-semibold text-blue-500">{rainInches.toFixed(2)}"</span>
+                  </div>
+                )}
+
+                {/* Precipitation probability (only if no actual precip shown) */}
+                {precipProb > 30 && !snowInches && rainInches < 0.01 && (
+                  <div className="flex items-center gap-0.5 mt-2">
+                    <Droplets className="w-3 h-3 text-blue-400/70" />
+                    <span className="text-xs font-medium text-blue-400/70">{precipProb}%</span>
                   </div>
                 )}
               </div>
@@ -2951,7 +2970,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.5.0
+          v1.5.1
         </div>
       </footer>
     </div>
