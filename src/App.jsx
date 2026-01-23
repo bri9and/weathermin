@@ -490,23 +490,57 @@ function AirQualityCard({ airQuality }) {
   const aqiValue = aqi.us_aqi ?? 0
   const aqiLevel = getAqiLevel(aqiValue)
 
+  // Get color based on pollutant level (simplified thresholds)
+  const getPollutantColor = (type, value) => {
+    if (!value) return 'bg-slate-200 dark:bg-slate-600'
+    const thresholds = {
+      pm2_5: [12, 35, 55, 150],
+      pm10: [54, 154, 254, 354],
+      ozone: [50, 100, 130, 165],
+      no2: [53, 100, 360, 649]
+    }
+    const t = thresholds[type] || [50, 100, 150, 200]
+    if (value <= t[0]) return 'bg-emerald-400'
+    if (value <= t[1]) return 'bg-yellow-400'
+    if (value <= t[2]) return 'bg-orange-400'
+    if (value <= t[3]) return 'bg-red-400'
+    return 'bg-purple-400'
+  }
+
+  const pollutants = [
+    { key: 'pm2_5', label: 'PM2.5', value: aqi.pm2_5, unit: 'µg/m³' },
+    { key: 'pm10', label: 'PM10', value: aqi.pm10, unit: 'µg/m³' },
+    { key: 'ozone', label: 'Ozone', value: aqi.ozone, unit: 'µg/m³' },
+    { key: 'no2', label: 'NO₂', value: aqi.nitrogen_dioxide, unit: 'µg/m³' }
+  ]
+
   return (
     <Card className="mb-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        {/* AQI Score */}
         <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-lg ${aqiLevel.bg}`}>
-            <div className={`text-3xl font-light ${aqiLevel.color}`}>{aqiValue}</div>
+          <div className={`w-20 h-20 rounded-xl ${aqiLevel.bg} flex flex-col items-center justify-center`}>
+            <div className={`text-3xl font-bold ${aqiLevel.color}`}>{aqiValue}</div>
+            <div className={`text-xs ${aqiLevel.color}`}>AQI</div>
           </div>
           <div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Air Quality Index</div>
-            <div className={`text-lg font-medium ${aqiLevel.color}`}>{aqiLevel.label}</div>
+            <div className={`text-xl font-semibold ${aqiLevel.color}`}>{aqiLevel.label}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">Air Quality</div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-          <div className="text-slate-500 dark:text-slate-400">PM2.5 <span className="text-slate-700 dark:text-slate-300">{aqi.pm2_5?.toFixed(1)}</span></div>
-          <div className="text-slate-500 dark:text-slate-400">PM10 <span className="text-slate-700 dark:text-slate-300">{aqi.pm10?.toFixed(1)}</span></div>
-          <div className="text-slate-500 dark:text-slate-400">Ozone <span className="text-slate-700 dark:text-slate-300">{aqi.ozone?.toFixed(1)}</span></div>
-          <div className="text-slate-500 dark:text-slate-400">NO₂ <span className="text-slate-700 dark:text-slate-300">{aqi.nitrogen_dioxide?.toFixed(1)}</span></div>
+
+        {/* Pollutant Bars */}
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {pollutants.map(p => (
+            <div key={p.key} className="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{p.label}</span>
+                <span className={`w-2 h-2 rounded-full ${getPollutantColor(p.key, p.value)}`}></span>
+              </div>
+              <div className="text-lg font-semibold text-slate-800 dark:text-white">{p.value?.toFixed(1) ?? '--'}</div>
+              <div className="text-xs text-slate-400">{p.unit}</div>
+            </div>
+          ))}
         </div>
       </div>
     </Card>
@@ -2459,7 +2493,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.2.3
+          v1.2.4
         </div>
       </footer>
     </div>
