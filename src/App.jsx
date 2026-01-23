@@ -2496,8 +2496,8 @@ export default function App() {
             </a>
           </p>
         </div>
-        <div className="fixed bottom-3 left-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.0.0
+        <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
+          v1.1.0
         </div>
       </footer>
     </div>
