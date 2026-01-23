@@ -482,6 +482,37 @@ function ConditionsCard({ modelData, dailyForecast, airQuality }) {
   )
 }
 
+// Air Quality Card - compact display for main page
+function AirQualityCard({ airQuality }) {
+  if (!airQuality?.current) return null
+
+  const aqi = airQuality.current
+  const aqiValue = aqi.us_aqi ?? 0
+  const aqiLevel = getAqiLevel(aqiValue)
+
+  return (
+    <Card className="mb-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-lg ${aqiLevel.bg}`}>
+            <div className={`text-3xl font-light ${aqiLevel.color}`}>{aqiValue}</div>
+          </div>
+          <div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">Air Quality Index</div>
+            <div className={`text-lg font-medium ${aqiLevel.color}`}>{aqiLevel.label}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+          <div className="text-slate-500 dark:text-slate-400">PM2.5 <span className="text-slate-700 dark:text-slate-300">{aqi.pm2_5?.toFixed(1)}</span></div>
+          <div className="text-slate-500 dark:text-slate-400">PM10 <span className="text-slate-700 dark:text-slate-300">{aqi.pm10?.toFixed(1)}</span></div>
+          <div className="text-slate-500 dark:text-slate-400">Ozone <span className="text-slate-700 dark:text-slate-300">{aqi.ozone?.toFixed(1)}</span></div>
+          <div className="text-slate-500 dark:text-slate-400">NO₂ <span className="text-slate-700 dark:text-slate-300">{aqi.nitrogen_dioxide?.toFixed(1)}</span></div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 // Animated zoom component for fly-in effect
 function ZoomAnimator({ center, startZoom, endZoom, onZoomComplete }) {
   const map = useMap()
@@ -2381,6 +2412,9 @@ export default function App() {
           <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
         </div>
 
+        {/* Air Quality */}
+        <AirQualityCard airQuality={airQuality} />
+
         {/* Hourly Forecast Strip */}
         <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
@@ -2425,7 +2459,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.2.2
+          v1.2.3
         </div>
       </footer>
     </div>
