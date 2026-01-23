@@ -70,10 +70,9 @@ const DEFAULT_LOCATION = {
 
 const TABS = [
   { id: 'forecast', label: 'Forecast' },
-  { id: 'hourly', label: 'Hourly' },
   { id: 'radar', label: 'Radar' },
   { id: 'models', label: 'Models' },
-  { id: 'links', label: 'Links' },
+  { id: 'links', label: 'Sources' },
 ]
 
 const WEATHER_LINKS = {
@@ -670,6 +669,83 @@ function MiniRadar({ location }) {
   )
 }
 
+// Quick Stats Panel - minimalist weather info
+function QuickStats({ modelData, dailyForecast, airQuality }) {
+  const isDark = useColorScheme()
+
+  if (!modelData?.current || !dailyForecast?.daily) return null
+
+  const current = modelData.current
+  const daily = dailyForecast.daily
+  const today = dailyForecast.current
+
+  const high = Math.round(daily.temperature_2m_max[0])
+  const low = Math.round(daily.temperature_2m_min[0])
+  const currentTemp = Math.round(current.temperature_2m)
+  const feelsLike = Math.round(current.apparent_temperature)
+  const humidity = current.relative_humidity_2m
+  const windSpeed = Math.round(current.wind_speed_10m)
+  const precip = daily.precipitation_probability_max[0]
+  const rain = daily.precipitation_sum[0]
+  const snow = daily.snowfall_sum[0] / 2.54 // cm to inches
+  const uvIndex = today?.uv_index || 0
+  const visibility = today?.visibility ? Math.round(today.visibility / 1609.34) : null // m to miles
+  const dewPoint = today?.dew_point_2m ? Math.round(today.dew_point_2m) : null
+  const aqi = airQuality?.current?.us_aqi
+
+  const getAqiLabel = (aqi) => {
+    if (!aqi) return { label: '--', color: 'text-slate-400' }
+    if (aqi <= 50) return { label: 'Good', color: 'text-green-500' }
+    if (aqi <= 100) return { label: 'Moderate', color: 'text-yellow-500' }
+    if (aqi <= 150) return { label: 'Unhealthy*', color: 'text-orange-500' }
+    if (aqi <= 200) return { label: 'Unhealthy', color: 'text-red-500' }
+    return { label: 'Hazardous', color: 'text-purple-500' }
+  }
+
+  const getUvLabel = (uv) => {
+    if (uv <= 2) return { label: 'Low', color: 'text-green-500' }
+    if (uv <= 5) return { label: 'Moderate', color: 'text-yellow-500' }
+    if (uv <= 7) return { label: 'High', color: 'text-orange-500' }
+    if (uv <= 10) return { label: 'Very High', color: 'text-red-500' }
+    return { label: 'Extreme', color: 'text-purple-500' }
+  }
+
+  const aqiInfo = getAqiLabel(aqi)
+  const uvInfo = getUvLabel(uvIndex)
+
+  const StatRow = ({ label, value, unit = '', className = '' }) => (
+    <div className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+      <span className="text-slate-500 dark:text-slate-400 text-sm">{label}</span>
+      <span className={`font-semibold text-slate-800 dark:text-white ${className}`}>{value}{unit}</span>
+    </div>
+  )
+
+  return (
+    <Card className="h-[375px] flex flex-col">
+      {/* Current Temp Header */}
+      <div className="text-center pb-3 border-b border-slate-100 dark:border-slate-700">
+        <div className="text-5xl font-light text-slate-800 dark:text-white">{currentTemp}°</div>
+        <div className="text-sm text-slate-500 dark:text-slate-400">Feels like {feelsLike}°</div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="flex-1 overflow-auto py-2">
+        <StatRow label="High" value={high} unit="°" className="text-rose-500" />
+        <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
+        <StatRow label="Humidity" value={humidity} unit="%" />
+        <StatRow label="Wind" value={windSpeed} unit=" mph" />
+        <StatRow label="Precip Chance" value={precip} unit="%" />
+        {rain > 0 && <StatRow label="Rain" value={rain.toFixed(2)} unit='"' />}
+        {snow > 0.05 && <StatRow label="Snow" value={snow.toFixed(1)} unit='"' className="text-sky-500" />}
+        <StatRow label="UV Index" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
+        <StatRow label="Air Quality" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
+        {visibility && <StatRow label="Visibility" value={visibility} unit=" mi" />}
+        {dewPoint && <StatRow label="Dew Point" value={dewPoint} unit="°" />}
+      </div>
+    </Card>
+  )
+}
+
 // Compact Hourly Forecast Strip
 function HourlyStrip({ modelData, dailyForecast }) {
   const isDark = useColorScheme()
@@ -746,14 +822,15 @@ function HourlyStrip({ modelData, dailyForecast }) {
   )
 }
 
-// Friendly Daily Weather Greeting
-function DailyGreeting({ modelData, dailyForecast, airQuality }) {
-  const greeting = useMemo(() => {
+// Practical Weather Brief - what you need to know before heading out
+function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
+  const brief = useMemo(() => {
     if (!modelData?.current || !dailyForecast?.daily) return null
 
     const current = modelData.current
     const daily = dailyForecast.daily
     const temp = Math.round(current.temperature_2m)
+    const feelsLike = Math.round(current.apparent_temperature)
     const weatherCode = current.weather_code
     const humidity = current.relative_humidity_2m
     const windSpeed = Math.round(current.wind_speed_10m)
@@ -761,148 +838,159 @@ function DailyGreeting({ modelData, dailyForecast, airQuality }) {
     const todayHigh = Math.round(daily.temperature_2m_max[0])
     const todayLow = Math.round(daily.temperature_2m_min[0])
     const precipProb = daily.precipitation_probability_max[0] || 0
+    const rainfall = daily.precipitation_sum[0] || 0
     const snowfall = (daily.snowfall_sum[0] || 0) / 2.54
     const aqi = airQuality?.current?.us_aqi
+    const visibility = dailyForecast.current?.visibility
 
-    // Time-based greeting
-    const hour = new Date().getHours()
-    let timeGreeting = 'Good morning'
-    if (hour >= 12 && hour < 17) timeGreeting = 'Good afternoon'
-    else if (hour >= 17 && hour < 21) timeGreeting = 'Good evening'
-    else if (hour >= 21 || hour < 5) timeGreeting = 'Good night'
-
-    // Build the message
-    const messages = []
-    const tips = []
-
-    // Temperature feeling
+    // What to wear
+    const wear = []
     if (temp <= 20) {
-      messages.push(`Brrr! It's a chilly ${temp}°F out there`)
-      tips.push('Bundle up warm today!')
+      wear.push('Heavy winter coat', 'Hat & gloves', 'Layers')
     } else if (temp <= 32) {
-      messages.push(`It's a cold ${temp}°F right now`)
-      tips.push('Layer up and stay cozy!')
-    } else if (temp <= 50) {
-      messages.push(`A cool ${temp}°F to start`)
-      tips.push('A light jacket should do the trick')
-    } else if (temp <= 70) {
-      messages.push(`A pleasant ${temp}°F today`)
-      tips.push('Perfect weather to get outside!')
-    } else if (temp <= 85) {
-      messages.push(`A warm ${temp}°F awaits you`)
-      tips.push('Great day for outdoor activities!')
+      wear.push('Winter coat', 'Gloves', 'Warm layers')
+    } else if (temp <= 45) {
+      wear.push('Heavy jacket', 'Light gloves optional')
+    } else if (temp <= 60) {
+      wear.push('Light jacket or sweater')
+    } else if (temp <= 75) {
+      wear.push('Light layers')
     } else {
-      messages.push(`It's a hot ${temp}°F out there`)
-      tips.push('Stay cool and drink plenty of water!')
+      wear.push('Light, breathable clothing')
     }
 
-    // Weather conditions
-    if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) {
-      messages.push('with snow falling')
-      tips.push('Drive carefully on slick roads')
-    } else if ([61, 63, 65, 80, 81, 82].includes(weatherCode)) {
-      messages.push('with rain coming down')
-      tips.push("Don't forget your umbrella!")
-    } else if ([51, 53, 55, 56, 57].includes(weatherCode)) {
-      messages.push('with light drizzle')
-      tips.push('A raincoat might come in handy')
-    } else if ([95, 96, 99].includes(weatherCode)) {
-      messages.push('with thunderstorms')
-      tips.push('Best to stay indoors if you can')
-    } else if ([0, 1].includes(weatherCode)) {
-      messages.push('under clear skies')
-    } else if ([2, 3].includes(weatherCode)) {
-      messages.push('with some clouds around')
-    } else if ([45, 48].includes(weatherCode)) {
-      messages.push('with foggy conditions')
-      tips.push('Take it slow if you are driving')
+    // What to bring
+    const bring = []
+
+    // Precipitation
+    const isRaining = [51, 53, 55, 56, 57, 61, 63, 65, 80, 81, 82].includes(weatherCode)
+    const isSnowing = [71, 73, 75, 77, 85, 86].includes(weatherCode)
+    const isStormy = [95, 96, 99].includes(weatherCode)
+
+    if (isRaining || precipProb >= 50) {
+      bring.push('Umbrella')
+    }
+    if (isSnowing || snowfall > 0) {
+      bring.push('Waterproof boots')
+    }
+    if (uvIndex >= 6) {
+      bring.push('Sunscreen')
+    }
+    if (uvIndex >= 3) {
+      bring.push('Sunglasses')
+    }
+    if (temp >= 80) {
+      bring.push('Water bottle')
     }
 
-    // Snow forecast
-    if (snowfall > 0) {
-      if (snowfall >= 6) {
-        tips.push(`Heavy snow expected: ${snowfall.toFixed(1)}" - consider staying home!`)
-      } else if (snowfall >= 3) {
-        tips.push(`Significant snow coming: ${snowfall.toFixed(1)}" - plan accordingly`)
-      } else {
-        tips.push(`Light snow expected: ${snowfall.toFixed(1)}"`)
-      }
+    // Conditions to watch
+    const warnings = []
+
+    if (feelsLike <= 0) {
+      warnings.push(`Feels like ${feelsLike}°F with wind chill - frostbite risk`)
+    } else if (feelsLike !== temp && Math.abs(feelsLike - temp) >= 5) {
+      warnings.push(`Feels like ${feelsLike}°F`)
     }
 
-    // Rain probability (if not already raining/snowing)
-    if (precipProb >= 70 && ![61, 63, 65, 71, 73, 75, 80, 81, 82, 85, 86].includes(weatherCode)) {
-      tips.push(`${precipProb}% chance of precipitation - pack an umbrella just in case!`)
-    } else if (precipProb >= 40 && ![61, 63, 65, 71, 73, 75, 80, 81, 82, 85, 86].includes(weatherCode)) {
-      tips.push(`${precipProb}% rain chance later`)
+    if (snowfall >= 6) {
+      warnings.push(`${snowfall.toFixed(1)}" snow expected - travel may be hazardous`)
+    } else if (snowfall >= 2) {
+      warnings.push(`${snowfall.toFixed(1)}" snow expected - allow extra travel time`)
+    } else if (snowfall > 0) {
+      warnings.push(`Light snow: ${snowfall.toFixed(1)}" expected`)
     }
 
-    // UV warning
-    if (uvIndex >= 8) {
-      tips.push('UV is very high - sunscreen is a must!')
-    } else if (uvIndex >= 6) {
-      tips.push('UV is high - protect your skin!')
-    } else if (uvIndex >= 3 && [0, 1, 2].includes(weatherCode)) {
-      tips.push('Moderate UV - sunglasses recommended')
+    if (isStormy) {
+      warnings.push('Thunderstorms - avoid outdoor activities')
     }
 
-    // Wind
     if (windSpeed >= 30) {
-      tips.push('Very windy - hold onto your hat!')
+      warnings.push(`Strong winds: ${windSpeed} mph - secure loose items`)
     } else if (windSpeed >= 20) {
-      tips.push('Breezy conditions today')
+      warnings.push(`Windy: ${windSpeed} mph`)
     }
 
-    // Air quality
+    if (visibility && visibility < 1000) {
+      warnings.push('Low visibility - drive with caution')
+    }
+
     if (aqi && aqi > 150) {
-      tips.push('Air quality is poor - limit outdoor exposure')
+      warnings.push(`Poor air quality (AQI ${aqi}) - limit time outdoors`)
     } else if (aqi && aqi > 100) {
-      tips.push('Air quality is moderate - sensitive groups take care')
+      warnings.push(`Moderate air quality (AQI ${aqi}) - sensitive groups take care`)
     }
 
-    // High/Low summary
-    const tempRange = `High of ${todayHigh}°, low of ${todayLow}°`
-
-    return {
-      timeGreeting,
-      mainMessage: messages.join(' '),
-      tempRange,
-      tips: tips.slice(0, 3), // Max 3 tips
+    if (uvIndex >= 8) {
+      warnings.push(`Very high UV (${Math.round(uvIndex)}) - limit sun exposure`)
+    } else if (uvIndex >= 6) {
+      warnings.push(`High UV (${Math.round(uvIndex)}) - seek shade midday`)
     }
+
+    // Build headline
+    let headline = ''
+    if (isStormy) {
+      headline = 'Storms today - plan indoor activities'
+    } else if (snowfall >= 4) {
+      headline = 'Significant snow - consider remote work'
+    } else if (feelsLike <= 10) {
+      headline = 'Dangerously cold - minimize time outside'
+    } else if (feelsLike <= 32) {
+      headline = 'Bundle up before heading out'
+    } else if (temp >= 95) {
+      headline = 'Extreme heat - stay hydrated'
+    } else if (isRaining) {
+      headline = 'Wet weather - grab rain gear'
+    } else if (precipProb >= 70) {
+      headline = 'Rain likely later - pack an umbrella'
+    } else if (temp >= 70 && temp <= 80 && precipProb < 30 && uvIndex < 8) {
+      headline = 'Great day to be outside'
+    } else {
+      headline = `${todayHigh}° high today, ${todayLow}° tonight`
+    }
+
+    return { headline, wear, bring, warnings, temp, todayHigh, todayLow }
   }, [modelData, dailyForecast, airQuality])
 
-  if (!greeting) return null
+  if (!brief) return null
 
   return (
-    <Card className="mb-6 bg-gradient-to-br from-blue-50 via-white to-amber-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 border-blue-200/50 dark:border-slate-700">
-      <div className="flex items-start gap-4">
-        <div className="text-5xl animate-float">
-          {greeting.tips.some(t => t.includes('umbrella')) ? '🌂' :
-           greeting.tips.some(t => t.includes('snow')) ? '❄️' :
-           greeting.tips.some(t => t.includes('sunscreen') || t.includes('UV')) ? '😎' :
-           greeting.mainMessage.includes('clear') ? '☀️' :
-           greeting.mainMessage.includes('cloud') ? '⛅' :
-           greeting.mainMessage.includes('rain') ? '🌧️' :
-           greeting.mainMessage.includes('thunder') ? '⛈️' :
-           greeting.mainMessage.includes('chilly') || greeting.mainMessage.includes('cold') ? '🧥' :
-           greeting.mainMessage.includes('hot') ? '🥵' : '🌤️'}
+    <Card className="mb-6 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border-slate-200 dark:border-slate-700">
+      <div className="space-y-3">
+        {/* Headline */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">{brief.headline}</h2>
+          <div className="text-right">
+            <span className="text-2xl font-light text-slate-800 dark:text-white">{brief.temp}°</span>
+            <span className="text-sm text-slate-500 ml-2">H:{brief.todayHigh}° L:{brief.todayLow}°</span>
+          </div>
         </div>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-1">
-            {greeting.timeGreeting}!
-          </h2>
-          <p className="text-slate-600 dark:text-slate-300 mb-3 text-lg">
-            {greeting.mainMessage}. {greeting.tempRange}.
-          </p>
-          {greeting.tips.length > 0 && (
-            <ul className="space-y-2">
-              {greeting.tips.map((tip, i) => (
-                <li key={i} className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 rounded-full px-3 py-1.5 w-fit">
-                  <span className="text-blue-400">✦</span> {tip}
-                </li>
-              ))}
-            </ul>
+
+        {/* What to wear/bring */}
+        <div className="flex flex-wrap gap-4 text-sm">
+          {brief.wear.length > 0 && (
+            <div>
+              <span className="text-slate-500 dark:text-slate-400">Wear:</span>{' '}
+              <span className="text-slate-700 dark:text-slate-200">{brief.wear.join(', ')}</span>
+            </div>
+          )}
+          {brief.bring.length > 0 && (
+            <div>
+              <span className="text-slate-500 dark:text-slate-400">Bring:</span>{' '}
+              <span className="text-slate-700 dark:text-slate-200">{brief.bring.join(', ')}</span>
+            </div>
           )}
         </div>
+
+        {/* Warnings */}
+        {brief.warnings.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {brief.warnings.slice(0, 3).map((warning, i) => (
+              <span key={i} className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                {warning}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </Card>
   )
@@ -2237,8 +2325,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm">
+      {/* Fixed Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -2246,9 +2334,26 @@ export default function App() {
               <h1 className="hidden sm:block text-xl font-bold text-slate-800 dark:text-white">WeatherMin</h1>
             </div>
 
+            {/* Navigation Tabs */}
+            <nav className="hidden sm:flex items-center gap-1">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-blue-500 text-white shadow-md shadow-blue-200 dark:shadow-none'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
@@ -2258,8 +2363,8 @@ export default function App() {
                 }}
                 onFocus={() => searchResults.length > 0 && setShowResults(true)}
                 onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                placeholder="Search location..."
-                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-full text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-400 focus:shadow-lg focus:shadow-blue-100 dark:focus:shadow-none transition-all"
+                placeholder="Search..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-full text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-blue-400 focus:shadow-lg focus:shadow-blue-100 dark:focus:shadow-none transition-all"
               />
               {showResults && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden">
@@ -2285,7 +2390,7 @@ export default function App() {
 
             <button
               onClick={() => fetchWeatherData(location)}
-              className="p-2.5 rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors"
+              className="p-2 rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors"
               title="Refresh data"
             >
               <RefreshCw className={`w-5 h-5 text-slate-500 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
@@ -2294,7 +2399,7 @@ export default function App() {
             {/* User Auth */}
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2.5 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white shadow-md shadow-blue-200 dark:shadow-none">
+                <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white shadow-md shadow-blue-200 dark:shadow-none">
                   <LogIn className="w-4 h-4" />
                   <span className="text-sm font-semibold hidden sm:inline">Sign In</span>
                 </button>
@@ -2312,10 +2417,28 @@ export default function App() {
             </SignedIn>
           </div>
         </div>
+        {/* Mobile Navigation */}
+        <div className="sm:hidden border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-around py-2">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-blue-500 text-white'
+                    : 'text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-4 pt-24 sm:pt-20 pb-6">
         {error && (
           <Card className="mb-6 border-rose-500/30 bg-rose-500/10">
             <div className="flex items-center gap-3 text-rose-400">
@@ -2325,16 +2448,17 @@ export default function App() {
           </Card>
         )}
 
-        {/* Friendly Daily Greeting */}
-        <DailyGreeting modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
+        {/* Weather Brief - What you need to know */}
+        <WeatherBrief modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} location={location} />
 
-        {/* Radar - Front and Center */}
-        <div className="mb-6">
-          <MiniRadar location={location} />
-        </div>
-
-        {/* Weather Alerts - Below Radar */}
+        {/* Weather Alerts */}
         <AlertBanner alerts={alerts} />
+
+        {/* Radar + Quick Stats Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <MiniRadar location={location} />
+          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
+        </div>
 
         {/* Hourly Forecast Strip */}
         <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
@@ -2342,28 +2466,9 @@ export default function App() {
         {/* 10-Day Forecast Strip */}
         {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
 
-        {/* Calendar Month View */}
-        {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
-
-        {modelData && <CurrentConditions data={modelData} location={location} />}
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {TABS.map((tab) => (
-            <TabButton
-              key={tab.id}
-              active={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </TabButton>
-          ))}
-        </div>
-
         {/* Tab Content */}
         <div>
           {activeTab === 'forecast' && <ForecastTab forecast={forecast} dailyForecast={dailyForecast} location={location} modelData={modelData} airQuality={airQuality} />}
-          {activeTab === 'hourly' && <HourlyTab forecast={hourlyForecast} />}
           {activeTab === 'radar' && <RadarTab location={location} onGeolocate={handleGeolocate} locating={locating} />}
           {activeTab === 'models' && <ModelsTab modelData={modelData} location={location} />}
           {activeTab === 'links' && <LinksTab />}
