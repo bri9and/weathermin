@@ -602,6 +602,12 @@ function MiniRadar({ location }) {
           style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
           zoomControl={false}
           attributionControl={false}
+          dragging={false}
+          touchZoom={false}
+          doubleClickZoom={false}
+          scrollWheelZoom={false}
+          boxZoom={false}
+          keyboard={false}
         >
           <ZoomAnimator
             center={center}
@@ -1805,6 +1811,14 @@ function RadarTab({ location, onGeolocate, locating }) {
             zoom={8}
             className="h-full w-full"
             style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
+            zoomControl={false}
+            attributionControl={false}
+            dragging={false}
+            touchZoom={false}
+            doubleClickZoom={false}
+            scrollWheelZoom={false}
+            boxZoom={false}
+            keyboard={false}
           >
             <MapUpdater center={center} />
             <TileLayer
