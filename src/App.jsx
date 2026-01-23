@@ -721,15 +721,11 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   )
 
   return (
-    <Card className="h-[375px] flex flex-col">
-      {/* Current Temp Header */}
-      <div className="text-center pb-3 border-b border-slate-100 dark:border-slate-700">
-        <div className="text-5xl font-light text-slate-800 dark:text-white">{currentTemp}°</div>
-        <div className="text-sm text-slate-500 dark:text-slate-400">Feels like {feelsLike}°</div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="flex-1 overflow-auto py-2">
+    <Card>
+      {/* Stats Table */}
+      <div className="py-1">
+        <StatRow label="Current" value={currentTemp} unit="°" className="text-slate-800 dark:text-white" />
+        <StatRow label="Feels Like" value={feelsLike} unit="°" />
         <StatRow label="High" value={high} unit="°" className="text-rose-500" />
         <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
         <StatRow label="Humidity" value={humidity} unit="%" />
