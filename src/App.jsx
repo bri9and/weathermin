@@ -964,7 +964,7 @@ function SatelliteLoop({ location }) {
 }
 
 // Quick Stats Panel - engaging weather dashboard
-function QuickStats({ modelData, dailyForecast, airQuality }) {
+function QuickStats({ modelData, dailyForecast, airQuality, location }) {
   const isDark = useColorScheme()
 
   if (!modelData?.current || !dailyForecast?.daily) return null
@@ -1018,6 +1018,11 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
       <div className="h-[375px] flex flex-col">
         {/* Big Temperature Display */}
         <div className={`bg-gradient-to-br ${getTempGradient(currentTemp)} p-4 text-white`}>
+          {/* Location */}
+          <div className="text-white/90 text-sm font-medium mb-2 flex items-center gap-1">
+            <MapPin className="w-4 h-4" />
+            {location.name}
+          </div>
           <div className="flex items-start justify-between">
             <div>
               <div className="text-5xl font-bold tracking-tight">{currentTemp}°</div>
@@ -3480,7 +3485,7 @@ export default function App() {
 
         {/* Quick Stats at top */}
         <div className="mb-4">
-          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
+          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} location={location} />
         </div>
 
         {/* Weather Brief - Tips and warnings */}
