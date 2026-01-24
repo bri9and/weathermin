@@ -2794,8 +2794,8 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
                   <div className="relative">
                     <img
                       src={(() => {
-                        // Calculate tile coordinates for zoom level 5
-                        const z = 5
+                        // Calculate tile coordinates for zoom level 3 (zoomed out for regional view)
+                        const z = 3
                         const n = Math.pow(2, z)
                         const x = Math.floor((location.lon + 180) / 360 * n)
                         const latRad = location.lat * Math.PI / 180
@@ -3552,7 +3552,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.8.2
+          v1.8.3
         </div>
       </footer>
     </div>
