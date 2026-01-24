@@ -545,10 +545,23 @@ function AirQualityCard({ airQuality }) {
 function ZoomAnimator({ center, startZoom, endZoom, onZoomComplete }) {
   const map = useMap()
   const hasAnimated = useRef(false)
+  const prevCenter = useRef(null)
 
   useEffect(() => {
+    // Check if center changed (location update)
+    const centerChanged = prevCenter.current &&
+      (prevCenter.current[0] !== center[0] || prevCenter.current[1] !== center[1])
+
+    if (centerChanged) {
+      // Just fly to new location without the zoom-out animation
+      map.flyTo(center, endZoom, { duration: 1.5 })
+      prevCenter.current = center
+      return
+    }
+
     if (hasAnimated.current) return
     hasAnimated.current = true
+    prevCenter.current = center
 
     // Wait for map to be ready
     const startAnimation = () => {
@@ -3298,7 +3311,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.7.0
+          v1.7.1
         </div>
       </footer>
     </div>
