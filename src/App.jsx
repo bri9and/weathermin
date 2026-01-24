@@ -716,7 +716,7 @@ function MiniRadar({ location }) {
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
         {/* Title overlay */}
-        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
+        <div className={`absolute top-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
           Live Radar
         </div>
         {/* Time indicator */}
