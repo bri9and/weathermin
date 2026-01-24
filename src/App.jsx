@@ -3390,7 +3390,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3">
