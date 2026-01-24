@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react'
 import {
   SignedIn,
   SignedOut,
@@ -1371,7 +1371,7 @@ function StormModelComparison({ location }) {
 
           {/* Model rows */}
           {models.map((model) => (
-            <React.Fragment key={model.name}>
+            <Fragment key={model.name}>
               <div className="flex items-center gap-2 py-2">
                 <div className={`w-3 h-3 rounded-full bg-${model.color}-500`}></div>
                 <div>
@@ -1396,7 +1396,7 @@ function StormModelComparison({ location }) {
               }`}>
                 {formatValue(model.totals.precip)}"
               </div>
-            </React.Fragment>
+            </Fragment>
           ))}
         </div>
 
