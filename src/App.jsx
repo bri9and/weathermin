@@ -741,12 +741,13 @@ function MiniRadar({ location }) {
   )
 }
 
-// GOES Satellite Loop - hybrid approach: static image + video animation
+// GOES Satellite Loop - auto-playing video with duration options
 function SatelliteLoop({ location }) {
   const isDark = useColorScheme()
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(true) // Auto-start
   const [imageLoaded, setImageLoaded] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
+  const [duration, setDuration] = useState('2hr') // '2hr', '6hr', '12hr'
   const videoRef = useRef(null)
 
   // Complete sector mapping based on NOAA documentation
@@ -823,10 +824,14 @@ function SatelliteLoop({ location }) {
 
   const { sector, name, sat } = getSector(location.lat, location.lon)
 
+  // Duration to frame count mapping (NOAA uses frames, ~5 min apart)
+  const durationFrames = { '2hr': 24, '6hr': 72, '12hr': 144 }
+  const frames = durationFrames[duration]
+
   // URLs for static image and video
   const latestImageUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/1200x1200.jpg`
   const videoUrl = `https://cdn.star.nesdis.noaa.gov/${sat}/ABI/SECTOR/${sector}/GEOCOLOR/${sat}-${sector.toUpperCase()}-GEOCOLOR-600x600.mp4`
-  const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=24`
+  const noaaUrl = `https://www.star.nesdis.noaa.gov/GOES/sector_band.php?sat=${sat.replace('GOES', 'G')}&sector=${sector}&band=GEOCOLOR&length=${frames}`
 
   // Handle play/pause
   const togglePlay = () => {
@@ -839,11 +844,11 @@ function SatelliteLoop({ location }) {
     }
   }
 
-  // Preload video when component mounts
+  // Reset and auto-start when location changes
   useEffect(() => {
     setImageLoaded(false)
     setVideoLoaded(false)
-    setIsPlaying(false)
+    setIsPlaying(true) // Auto-start video
   }, [sector, sat])
 
   return (
@@ -901,35 +906,46 @@ function SatelliteLoop({ location }) {
           {sat} • {sector.toUpperCase()}
         </div>
 
-        {/* Play/Pause button */}
-        <button
-          onClick={togglePlay}
-          className={`absolute bottom-3 left-3 backdrop-blur-sm px-4 py-2 rounded-lg text-sm z-10 flex items-center gap-2 transition-all hover:scale-105 ${
-            isPlaying
-              ? 'bg-green-500 text-white'
-              : isDark ? 'bg-slate-900/80 text-slate-300 hover:bg-slate-800' : 'bg-white/90 text-slate-700 hover:bg-white shadow-sm'
-          }`}
-        >
-          {isPlaying ? (
-            <>
-              <Pause className="w-4 h-4" />
-              Playing Loop
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4" />
-              Play 2hr Loop
-            </>
-          )}
-        </button>
+        {/* Controls row */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between z-10">
+          {/* Play/Pause button */}
+          <button
+            onClick={togglePlay}
+            className={`backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-all hover:scale-105 ${
+              isPlaying
+                ? 'bg-green-500 text-white'
+                : isDark ? 'bg-slate-900/80 text-slate-300 hover:bg-slate-800' : 'bg-white/90 text-slate-700 hover:bg-white shadow-sm'
+            }`}
+          >
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {isPlaying ? 'Playing' : 'Paused'}
+          </button>
 
-        {/* Live indicator (when not playing) */}
-        {!isPlaying && imageLoaded && (
-          <div className={`absolute bottom-3 right-24 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-400' : 'bg-white/90 text-slate-500 shadow-sm'}`}>
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Live
+          {/* Duration selector */}
+          <div className={`backdrop-blur-sm rounded-lg text-xs flex overflow-hidden ${isDark ? 'bg-slate-900/80' : 'bg-white/90 shadow-sm'}`}>
+            {['2hr', '6hr', '12hr'].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDuration(d)}
+                className={`px-3 py-2 transition-colors ${
+                  duration === d
+                    ? 'bg-sky-500 text-white'
+                    : isDark ? 'text-slate-400 hover:text-white hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
           </div>
-        )}
+
+          {/* Loop indicator */}
+          {isPlaying && (
+            <div className={`backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-400' : 'bg-white/90 text-slate-500 shadow-sm'}`}>
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              Loop
+            </div>
+          )}
+        </div>
 
         {/* Link to NOAA */}
         <a
@@ -3311,7 +3327,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.7.1
+          v1.7.2
         </div>
       </footer>
     </div>
