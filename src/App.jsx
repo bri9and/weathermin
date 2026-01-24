@@ -3394,10 +3394,10 @@ export default function App() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <a href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 hover:opacity-80 transition-opacity">
               <img src="/icons/icon-192.png" alt="WeatherMin" className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl shadow-md" />
               <h1 className="hidden sm:block text-xl font-bold text-slate-800 dark:text-white">WeatherMin</h1>
-            </div>
+            </a>
 
             {/* Search */}
             <div className="relative flex-1 max-w-xs">
