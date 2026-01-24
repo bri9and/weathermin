@@ -1579,33 +1579,23 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
 
   if (!brief) return null
 
+  // Combine wear and bring into one brief tip
+  const tips = [...brief.wear, ...brief.bring].slice(0, 3)
+
   return (
-    <Card className="mb-6 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border-slate-200 dark:border-slate-700">
-      <div className="space-y-3">
-        {/* Headline */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-white">{brief.headline}</h2>
-          <div className="text-right">
-            <span className="text-2xl font-light text-slate-800 dark:text-white">{brief.temp}°</span>
-            <span className="text-sm text-slate-500 ml-2">H:{brief.todayHigh}° L:{brief.todayLow}°</span>
-          </div>
-        </div>
+    <Card className="mb-4 py-3 px-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border-slate-200 dark:border-slate-700">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Brief tip */}
+        {tips.length > 0 && (
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Grab: <span className="font-medium">{tips.join(', ').toLowerCase()}</span>
+          </p>
+        )}
 
-        {/* What to wear/bring - friendly suggestions */}
-        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
-          {brief.wear.length > 0 && (
-            <p>You'll want to grab your <span className="font-medium">{brief.wear.join(', ').toLowerCase()}</span>.</p>
-          )}
-          {brief.bring.length > 0 && (
-            <p>Don't forget: <span className="font-medium">{brief.bring.join(', ').toLowerCase()}</span>.</p>
-          )}
-        </div>
-
-        {/* Warnings */}
+        {/* Warnings - inline */}
         {brief.warnings.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {brief.warnings.slice(0, 3).map((warning, i) => {
-              // Color based on danger level for first warning (cold-related)
+            {brief.warnings.slice(0, 2).map((warning, i) => {
               const isFirstColdWarning = i === 0 && (brief.dangerLevel === 'extreme' || brief.dangerLevel === 'danger')
               const bgColor = isFirstColdWarning
                 ? brief.dangerLevel === 'extreme'
@@ -3486,16 +3476,20 @@ export default function App() {
           </Card>
         )}
 
-        {/* Weather Brief - What you need to know */}
+        {/* Quick Stats at top */}
+        <div className="mb-4">
+          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
+        </div>
+
+        {/* Weather Brief - Tips and warnings */}
         <WeatherBrief modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} location={location} />
 
         {/* Weather Alerts */}
         <AlertBanner alerts={alerts} />
 
-        {/* Radar + Quick Stats Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Radar */}
+        <div className="mb-6">
           <MiniRadar location={location} />
-          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} />
         </div>
 
         {/* Satellite Loop */}
