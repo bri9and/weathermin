@@ -1498,9 +1498,21 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
 
     // Conditions to watch
     const warnings = []
+    let dangerLevel = null // 'extreme', 'danger', 'warning'
 
-    if (feelsLike <= 0) {
-      warnings.push(`Feels like ${feelsLike}°F with wind chill - frostbite risk`)
+    // Extreme cold warnings with frostbite timing
+    if (feelsLike <= -20) {
+      dangerLevel = 'extreme'
+      warnings.unshift(`DANGEROUS: ${feelsLike}°F wind chill - frostbite in 10 minutes!`)
+    } else if (feelsLike <= -10) {
+      dangerLevel = 'extreme'
+      warnings.unshift(`EXTREME COLD: ${feelsLike}°F wind chill - frostbite in 30 minutes`)
+    } else if (feelsLike <= 0) {
+      dangerLevel = 'danger'
+      warnings.unshift(`Wind chill ${feelsLike}°F - cover exposed skin, frostbite risk`)
+    } else if (feelsLike <= 15) {
+      dangerLevel = 'warning'
+      warnings.push(`Feels like ${feelsLike}°F - dress warmly`)
     } else if (feelsLike !== temp && Math.abs(feelsLike - temp) >= 5) {
       warnings.push(`Feels like ${feelsLike}°F`)
     }
@@ -1561,7 +1573,7 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
       headline = `Looking at ${todayHigh}° today with a low of ${todayLow}° tonight.`
     }
 
-    return { headline, wear, bring, warnings, temp, todayHigh, todayLow }
+    return { headline, wear, bring, warnings, dangerLevel, temp, todayHigh, todayLow, feelsLike }
   }, [modelData, dailyForecast, airQuality])
 
   if (!brief) return null
@@ -1591,11 +1603,26 @@ function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
         {/* Warnings */}
         {brief.warnings.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {brief.warnings.slice(0, 3).map((warning, i) => (
-              <span key={i} className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                {warning}
-              </span>
-            ))}
+            {brief.warnings.slice(0, 3).map((warning, i) => {
+              // Color based on danger level for first warning (cold-related)
+              const isFirstColdWarning = i === 0 && (brief.dangerLevel === 'extreme' || brief.dangerLevel === 'danger')
+              const bgColor = isFirstColdWarning
+                ? brief.dangerLevel === 'extreme'
+                  ? 'bg-red-100 dark:bg-red-900/40'
+                  : 'bg-pink-100 dark:bg-pink-900/30'
+                : 'bg-amber-100 dark:bg-amber-900/30'
+              const textColor = isFirstColdWarning
+                ? brief.dangerLevel === 'extreme'
+                  ? 'text-red-700 dark:text-red-300'
+                  : 'text-pink-700 dark:text-pink-300'
+                : 'text-amber-700 dark:text-amber-300'
+
+              return (
+                <span key={i} className={`text-xs px-2 py-1 rounded-full ${bgColor} ${textColor} ${isFirstColdWarning ? 'font-semibold' : ''}`}>
+                  {warning}
+                </span>
+              )
+            })}
           </div>
         )}
       </div>
@@ -2774,7 +2801,15 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
                 {radarPreview ? (
                   <div className="relative">
                     <img
-                      src={`https://tilecache.rainviewer.com${radarPreview.path}/512/4/${Math.round(location.lat / 10)}/${Math.round((location.lon + 180) / 10)}/2/1_1.png`}
+                      src={(() => {
+                        // Calculate tile coordinates for zoom level 5
+                        const z = 5
+                        const n = Math.pow(2, z)
+                        const x = Math.floor((location.lon + 180) / 360 * n)
+                        const latRad = location.lat * Math.PI / 180
+                        const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n)
+                        return `https://tilecache.rainviewer.com${radarPreview.path}/256/${z}/${x}/${y}/2/1_1.png`
+                      })()}
                       alt="Radar preview"
                       className="w-full h-32 object-cover rounded-lg bg-slate-100 dark:bg-slate-700"
                       onError={(e) => { e.target.style.display = 'none' }}
@@ -3526,7 +3561,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.8.0
+          v1.8.1
         </div>
       </footer>
     </div>
