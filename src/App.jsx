@@ -3551,8 +3551,9 @@ export default function App() {
             </a>
           </p>
         </div>
-        <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
+        <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
           v1.8.3
+          <div>EX26</div>
         </div>
       </footer>
     </div>
