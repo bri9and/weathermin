@@ -714,11 +714,11 @@ function MiniRadar({ location }) {
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
         {/* Title overlay */}
-        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-[1000] ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
+        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
           Live Radar
         </div>
         {/* Time indicator */}
-        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-[1000] flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
+        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
           <span className={`w-2 h-2 rounded-full ${zoomComplete ? 'bg-red-500 animate-pulse' : 'bg-sky-500 animate-ping'}`}></span>
           {zoomComplete ? (
             <>
@@ -730,7 +730,7 @@ function MiniRadar({ location }) {
           )}
         </div>
         {/* Progress bar */}
-        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-[1000] ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
           <div
             className="h-full bg-sky-500 transition-all duration-300"
             style={{ width: `${((currentFrame + 1) / radarFrames.length) * 100}%` }}
@@ -2548,12 +2548,12 @@ function RadarTab({ location, onGeolocate, locating }) {
             )}
           </MapContainer>
           {/* Time indicator */}
-          <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm text-slate-200 z-[1000]">
+          <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm text-slate-200 z-10">
             {frameTime}
           </div>
           {/* Alert Legend */}
           {showAlerts && alertsGeoJson?.features?.length > 0 && (
-            <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-2 rounded-lg text-xs z-[1000]">
+            <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-sm px-3 py-2 rounded-lg text-xs z-10">
               <div className="text-slate-400 mb-1.5 font-medium">Alerts</div>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">

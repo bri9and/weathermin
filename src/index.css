@@ -88,6 +88,18 @@ body {
   animation: float 3s ease-in-out infinite;
 }
 
+/* Leaflet map z-index fix - keep below header */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-pane,
+.leaflet-control,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
