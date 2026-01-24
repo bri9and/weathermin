@@ -695,14 +695,16 @@ function MiniRadar({ location }) {
           zoom={3}
           className="h-full w-full"
           style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
-          zoomControl={false}
+          zoomControl={true}
           attributionControl={false}
-          dragging={false}
-          touchZoom={false}
-          doubleClickZoom={false}
+          dragging={true}
+          touchZoom={true}
+          doubleClickZoom={true}
           scrollWheelZoom={false}
           boxZoom={false}
           keyboard={false}
+          minZoom={4}
+          maxZoom={12}
         >
           <ZoomAnimator
             center={center}
