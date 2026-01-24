@@ -1298,14 +1298,15 @@ function StormModelComparison({ location }) {
 
   // Calculate totals for each model
   const calcTotals = (daily, daysCount) => {
-    if (!daily) return { snow: 0, precip: 0, rain: 0 }
+    if (!daily) return { snow: 0, rain: 0, total: 0 }
     const snowCm = daily.snowfall_sum?.slice(0, daysCount) || []
-    const precipMm = daily.precipitation_sum?.slice(0, daysCount) || []
     const rainMm = daily.rain_sum?.slice(0, daysCount) || []
+    const snow = snowCm.reduce((a, b) => a + (b || 0), 0) / 2.54 // cm to inches
+    const rain = rainMm.reduce((a, b) => a + (b || 0), 0) / 25.4 // mm to inches
     return {
-      snow: snowCm.reduce((a, b) => a + (b || 0), 0) / 2.54, // cm to inches
-      precip: precipMm.reduce((a, b) => a + (b || 0), 0) / 25.4, // mm to inches
-      rain: rainMm.reduce((a, b) => a + (b || 0), 0) / 25.4
+      snow,
+      rain,
+      total: snow + rain // Total = Snow + Rain
     }
   }
 
@@ -1315,7 +1316,7 @@ function StormModelComparison({ location }) {
 
   // Find max values for highlighting
   const maxSnow = Math.max(gfsTotals.snow, gemTotals.snow)
-  const maxPrecip = Math.max(gfsTotals.precip, gemTotals.precip, ecmwfTotals.precip)
+  const maxTotal = Math.max(gfsTotals.total, gemTotals.total, ecmwfTotals.total)
 
   const models = [
     { name: 'GFS', desc: 'American', totals: gfsTotals, color: 'blue' },
@@ -1390,11 +1391,11 @@ function StormModelComparison({ location }) {
                 {formatValue(model.totals.rain)}"
               </div>
               <div className={`py-2 text-center font-bold ${
-                model.totals.precip === maxPrecip && maxPrecip > 0
+                model.totals.total === maxTotal && maxTotal > 0
                   ? 'text-cyan-500 bg-cyan-500/10 rounded'
                   : isDark ? 'text-slate-300' : 'text-slate-700'
               }`}>
-                {formatValue(model.totals.precip)}"
+                {formatValue(model.totals.total)}"
               </div>
             </Fragment>
           ))}
