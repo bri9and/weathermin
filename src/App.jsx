@@ -2422,7 +2422,7 @@ function ApiStatusDot({ status }) {
 // Live Data Sources Page component
 function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alerts }) {
   const isDark = useColorScheme()
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [apiStatuses, setApiStatuses] = useState({})
   const [radarPreview, setRadarPreview] = useState(null)
   const [gemData, setGemData] = useState(null)
@@ -3327,7 +3327,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.7.2
+          v1.7.3
         </div>
       </footer>
     </div>
