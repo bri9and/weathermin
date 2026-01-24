@@ -1241,6 +1241,200 @@ function HourlyStrip({ modelData, dailyForecast }) {
   )
 }
 
+// Storm Model Comparison - side-by-side model forecasts
+function StormModelComparison({ location }) {
+  const isDark = useColorScheme()
+  const [modelData, setModelData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState(7) // 3, 5, 7, 10 days
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      setLoading(true)
+      try {
+        const [gfsRes, gemRes, ecmwfRes] = await Promise.all([
+          fetch(
+            `https://api.open-meteo.com/v1/gfs?latitude=${location.lat}&longitude=${location.lon}` +
+            `&daily=snowfall_sum,precipitation_sum,rain_sum,temperature_2m_max,temperature_2m_min` +
+            `&timezone=America/New_York&forecast_days=${Math.min(days, 16)}`
+          ),
+          fetch(
+            `https://api.open-meteo.com/v1/gem?latitude=${location.lat}&longitude=${location.lon}` +
+            `&daily=snowfall_sum,precipitation_sum,rain_sum,temperature_2m_max,temperature_2m_min` +
+            `&timezone=America/New_York&forecast_days=${Math.min(days, 16)}`
+          ),
+          fetch(
+            `https://api.open-meteo.com/v1/ecmwf?latitude=${location.lat}&longitude=${location.lon}` +
+            `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min` +
+            `&timezone=America/New_York&forecast_days=${Math.min(days, 10)}`
+          )
+        ])
+
+        const data = {}
+        if (gfsRes.ok) data.gfs = await gfsRes.json()
+        if (gemRes.ok) data.gem = await gemRes.json()
+        if (ecmwfRes.ok) data.ecmwf = await ecmwfRes.json()
+        setModelData(data)
+      } catch (err) {
+        console.error('Failed to fetch model data:', err)
+      }
+      setLoading(false)
+    }
+    fetchModels()
+  }, [location.lat, location.lon, days])
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <div className="flex items-center gap-3">
+          <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+          <span className="text-slate-400">Loading model comparison...</span>
+        </div>
+      </Card>
+    )
+  }
+
+  if (!modelData?.gfs) return null
+
+  // Calculate totals for each model
+  const calcTotals = (daily, daysCount) => {
+    if (!daily) return { snow: 0, precip: 0, rain: 0 }
+    const snowCm = daily.snowfall_sum?.slice(0, daysCount) || []
+    const precipMm = daily.precipitation_sum?.slice(0, daysCount) || []
+    const rainMm = daily.rain_sum?.slice(0, daysCount) || []
+    return {
+      snow: snowCm.reduce((a, b) => a + (b || 0), 0) / 2.54, // cm to inches
+      precip: precipMm.reduce((a, b) => a + (b || 0), 0) / 25.4, // mm to inches
+      rain: rainMm.reduce((a, b) => a + (b || 0), 0) / 25.4
+    }
+  }
+
+  const gfsTotals = calcTotals(modelData.gfs?.daily, days)
+  const gemTotals = calcTotals(modelData.gem?.daily, days)
+  const ecmwfTotals = calcTotals(modelData.ecmwf?.daily, days)
+
+  // Find max values for highlighting
+  const maxSnow = Math.max(gfsTotals.snow, gemTotals.snow)
+  const maxPrecip = Math.max(gfsTotals.precip, gemTotals.precip, ecmwfTotals.precip)
+
+  const models = [
+    { name: 'GFS', desc: 'American', totals: gfsTotals, color: 'blue' },
+    { name: 'GEM', desc: 'Canadian', totals: gemTotals, color: 'red' },
+    { name: 'Euro', desc: 'ECMWF', totals: ecmwfTotals, color: 'emerald' }
+  ]
+
+  const formatValue = (val, decimals = 1) => {
+    if (val === undefined || val === null || isNaN(val)) return '--'
+    return val.toFixed(decimals)
+  }
+
+  return (
+    <Card className="p-0 overflow-hidden">
+      {/* Header */}
+      <div className={`px-4 py-3 border-b flex items-center justify-between ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-slate-50'}`}>
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-amber-500" />
+          <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Storm Model Comparison</h3>
+        </div>
+        {/* Day selector */}
+        <div className={`flex rounded-lg overflow-hidden text-xs ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}>
+          {[3, 5, 7, 10].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={`px-3 py-1.5 transition-colors ${
+                days === d
+                  ? 'bg-sky-500 text-white'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {d}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Comparison Grid */}
+      <div className="p-4">
+        <div className="grid grid-cols-4 gap-2 text-sm">
+          {/* Header row */}
+          <div className={`font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Model</div>
+          <div className={`font-medium text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <Snowflake className="w-4 h-4 inline mr-1" />Snow
+          </div>
+          <div className={`font-medium text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <CloudRain className="w-4 h-4 inline mr-1" />Rain
+          </div>
+          <div className={`font-medium text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <Droplets className="w-4 h-4 inline mr-1" />Total
+          </div>
+
+          {/* Model rows */}
+          {models.map((model) => (
+            <React.Fragment key={model.name}>
+              <div className="flex items-center gap-2 py-2">
+                <div className={`w-3 h-3 rounded-full bg-${model.color}-500`}></div>
+                <div>
+                  <div className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{model.name}</div>
+                  <div className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{model.desc}</div>
+                </div>
+              </div>
+              <div className={`py-2 text-center font-bold ${
+                model.totals.snow === maxSnow && maxSnow > 0
+                  ? 'text-blue-500 bg-blue-500/10 rounded'
+                  : isDark ? 'text-slate-300' : 'text-slate-700'
+              }`}>
+                {formatValue(model.totals.snow)}"
+              </div>
+              <div className={`py-2 text-center font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                {formatValue(model.totals.rain)}"
+              </div>
+              <div className={`py-2 text-center font-bold ${
+                model.totals.precip === maxPrecip && maxPrecip > 0
+                  ? 'text-cyan-500 bg-cyan-500/10 rounded'
+                  : isDark ? 'text-slate-300' : 'text-slate-700'
+              }`}>
+                {formatValue(model.totals.precip)}"
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Visual bar comparison for snow */}
+        {maxSnow > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div className={`text-xs mb-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Snowfall Comparison ({days}-day total)
+            </div>
+            {models.filter(m => m.totals.snow > 0).map((model) => (
+              <div key={model.name} className="flex items-center gap-2 mb-2">
+                <div className={`w-12 text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {model.name}
+                </div>
+                <div className="flex-1 h-6 bg-slate-200 dark:bg-slate-700 rounded overflow-hidden">
+                  <div
+                    className={`h-full bg-gradient-to-r from-blue-500 to-cyan-400 flex items-center justify-end pr-2 text-xs font-bold text-white`}
+                    style={{ width: `${Math.max((model.totals.snow / maxSnow) * 100, 10)}%` }}
+                  >
+                    {formatValue(model.totals.snow)}"
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Spread indicator */}
+        {maxSnow > 0 && (
+          <div className={`mt-3 text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            Model spread: {formatValue(Math.abs(gfsTotals.snow - gemTotals.snow))}" difference in snow forecasts
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 // Practical Weather Brief - what you need to know before heading out
 function WeatherBrief({ modelData, dailyForecast, airQuality, location }) {
   const brief = useMemo(() => {
@@ -3285,6 +3479,11 @@ export default function App() {
         {/* Hourly Forecast Strip */}
         <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
+        {/* Storm Model Comparison */}
+        <div className="mb-6">
+          <StormModelComparison location={location} />
+        </div>
+
         {/* 10-Day Forecast Strip */}
         {dailyForecast && <TenDayStrip dailyForecast={dailyForecast} />}
 
@@ -3327,7 +3526,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.7.3
+          v1.8.0
         </div>
       </footer>
     </div>
