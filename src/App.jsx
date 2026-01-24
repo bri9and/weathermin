@@ -2643,7 +2643,6 @@ function ApiStatusDot({ status }) {
 // Live Data Sources Page component
 function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alerts }) {
   const isDark = useColorScheme()
-  const [isExpanded, setIsExpanded] = useState(true)
   const [apiStatuses, setApiStatuses] = useState({})
   const [radarPreview, setRadarPreview] = useState(null)
   const [gemData, setGemData] = useState(null)
@@ -2713,9 +2712,9 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
     fetchRadar()
   }, [])
 
-  // Fetch GEM model data for comparison when expanded
+  // Fetch GEM model data for comparison
   useEffect(() => {
-    if (!isExpanded || gemData || loadingGem) return
+    if (gemData || loadingGem) return
 
     const fetchGem = async () => {
       setLoadingGem(true)
@@ -2732,7 +2731,7 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
       setLoadingGem(false)
     }
     fetchGem()
-  }, [isExpanded, location.lat, location.lon, gemData, loadingGem])
+  }, [location.lat, location.lon, gemData, loadingGem])
 
   // Get current AQI data
   const aqi = airQuality?.current
@@ -2758,27 +2757,20 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
 
   return (
     <div className="space-y-6 mt-8">
-      {/* Collapsible Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 rounded-2xl border border-blue-200 dark:border-blue-500/30 hover:from-blue-500/20 hover:to-purple-500/20 dark:hover:from-blue-500/30 dark:hover:to-purple-500/30 transition-all"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-500/20 rounded-lg">
-            <Activity className="w-5 h-5 text-blue-500" />
-          </div>
-          <div className="text-left">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Data Sources</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {totalApis > 0 ? `${onlineCount}/${totalApis} APIs online` : 'Checking status...'}
-            </p>
-          </div>
+      {/* Header */}
+      <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 rounded-2xl border border-blue-200 dark:border-blue-500/30">
+        <div className="p-2 bg-blue-500/20 rounded-lg">
+          <Activity className="w-5 h-5 text-blue-500" />
         </div>
-        <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-      </button>
+        <div>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-white">Data Sources</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {totalApis > 0 ? `${onlineCount}/${totalApis} APIs online` : 'Checking status...'}
+          </p>
+        </div>
+      </div>
 
-      {isExpanded && (
-        <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6">
           {/* Live Data Preview Cards */}
           <div>
             <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
@@ -3158,8 +3150,7 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
               ))}
             </div>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -3561,7 +3552,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.8.1
+          v1.8.2
         </div>
       </footer>
     </div>
