@@ -932,6 +932,103 @@ function SatelliteLoop({ location }) {
   )
 }
 
+// Mini Satellite Animation - locally stored 300x300 frames
+function SatelliteMiniLoop() {
+  const isDark = useColorScheme()
+  const [currentFrame, setCurrentFrame] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(true)
+  const [imagesLoaded, setImagesLoaded] = useState(false)
+  const frameCount = 24
+  const frameInterval = 150 // ms between frames
+
+  // Preload all frames
+  useEffect(() => {
+    const images = []
+    let loaded = 0
+    for (let i = 0; i < frameCount; i++) {
+      const img = new Image()
+      img.onload = () => {
+        loaded++
+        if (loaded === frameCount) setImagesLoaded(true)
+      }
+      img.src = `/satellite-mini/frame_${i.toString().padStart(2, '0')}.jpg`
+      images.push(img)
+    }
+  }, [])
+
+  // Animation loop
+  useEffect(() => {
+    if (!isPlaying || !imagesLoaded) return
+    const interval = setInterval(() => {
+      setCurrentFrame(prev => (prev + 1) % frameCount)
+    }, frameInterval)
+    return () => clearInterval(interval)
+  }, [isPlaying, imagesLoaded])
+
+  const framePath = `/satellite-mini/frame_${currentFrame.toString().padStart(2, '0')}.jpg`
+
+  return (
+    <Card className="p-0 overflow-hidden rounded-xl">
+      <div className="h-[300px] relative bg-slate-900">
+        {/* Current frame */}
+        <img
+          src={framePath}
+          alt="Satellite Animation Frame"
+          className="w-full h-full object-cover"
+        />
+
+        {/* Loading overlay */}
+        {!imagesLoaded && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900">
+            <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
+            <span className="text-slate-400 text-sm">Loading frames...</span>
+          </div>
+        )}
+
+        {/* Title overlay */}
+        <div className={`absolute top-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
+          NE Satellite (Local)
+        </div>
+
+        {/* Frame counter */}
+        <div className={`absolute top-12 left-3 backdrop-blur-sm px-2 py-1 rounded text-xs z-10 ${isDark ? 'bg-slate-900/60 text-slate-400' : 'bg-white/80 text-slate-500'}`}>
+          Frame {currentFrame + 1}/{frameCount} • 300x300
+        </div>
+
+        {/* Play/Pause button */}
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
+          className={`absolute bottom-3 left-3 backdrop-blur-sm px-4 py-2 rounded-lg text-sm z-10 flex items-center gap-2 transition-all hover:scale-105 ${
+            isPlaying
+              ? 'bg-green-500 text-white'
+              : isDark ? 'bg-slate-900/80 text-slate-300 hover:bg-slate-800' : 'bg-white/90 text-slate-700 hover:bg-white shadow-sm'
+          }`}
+        >
+          {isPlaying ? (
+            <>
+              <Pause className="w-4 h-4" />
+              Pause
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4" />
+              Play
+            </>
+          )}
+        </button>
+
+        {/* Speed indicator */}
+        {imagesLoaded && (
+          <div className={`absolute bottom-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-400' : 'bg-white/90 text-slate-500 shadow-sm'}`}>
+            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+            2hr Loop • Local
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 // Quick Stats Panel - minimalist weather info
 function QuickStats({ modelData, dailyForecast, airQuality }) {
   const isDark = useColorScheme()
@@ -3152,6 +3249,11 @@ export default function App() {
           <SatelliteLoop location={location} />
         </div>
 
+        {/* Mini Satellite Animation (Local) */}
+        <div className="mb-6">
+          <SatelliteMiniLoop />
+        </div>
+
         {/* Air Quality */}
         <AirQualityCard airQuality={airQuality} />
 
@@ -3200,7 +3302,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.6.0
+          v1.6.1
         </div>
       </footer>
     </div>
