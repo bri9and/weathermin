@@ -6,22 +6,23 @@ import App from './App.jsx'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
+const clerkAppearance = {
+  baseTheme: undefined,
+  variables: { colorPrimary: '#0ea5e9' },
+  elements: {
+    formButtonPrimary: 'bg-sky-500 hover:bg-sky-600',
+    footerActionLink: 'text-sky-500 hover:text-sky-400',
+  }
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ClerkProvider
-      publishableKey={PUBLISHABLE_KEY}
-      appearance={{
-        baseTheme: undefined,
-        variables: {
-          colorPrimary: '#0ea5e9',
-        },
-        elements: {
-          formButtonPrimary: 'bg-sky-500 hover:bg-sky-600',
-          footerActionLink: 'text-sky-500 hover:text-sky-400',
-        }
-      }}
-    >
+    {PUBLISHABLE_KEY ? (
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY} appearance={clerkAppearance}>
+        <App />
+      </ClerkProvider>
+    ) : (
       <App />
-    </ClerkProvider>
+    )}
   </StrictMode>,
 )

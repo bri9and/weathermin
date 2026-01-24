@@ -932,7 +932,7 @@ function SatelliteLoop({ location }) {
   )
 }
 
-// Quick Stats Panel - minimalist weather info
+// Quick Stats Panel - engaging weather dashboard
 function QuickStats({ modelData, dailyForecast, airQuality }) {
   const isDark = useColorScheme()
 
@@ -949,52 +949,119 @@ function QuickStats({ modelData, dailyForecast, airQuality }) {
   const humidity = current.relative_humidity_2m
   const windSpeed = Math.round(current.wind_speed_10m)
   const precip = daily.precipitation_probability_max[0]
-  const rain = daily.precipitation_sum[0]
-  const snow = daily.snowfall_sum[0] / 2.54 // cm to inches
   const uvIndex = today?.uv_index || 0
-  const visibility = today?.visibility ? Math.round(today.visibility / 1609.34) : null // m to miles
-  const dewPoint = today?.dew_point_2m ? Math.round(today.dew_point_2m) : null
   const aqi = airQuality?.current?.us_aqi
 
-  const getAqiLabel = (aqi) => {
-    if (!aqi) return { label: '--', color: 'text-slate-400' }
-    if (aqi <= 50) return { label: 'Good', color: 'text-green-500' }
-    if (aqi <= 100) return { label: 'Moderate', color: 'text-yellow-500' }
-    if (aqi <= 150) return { label: 'Unhealthy*', color: 'text-orange-500' }
-    if (aqi <= 200) return { label: 'Unhealthy', color: 'text-red-500' }
-    return { label: 'Hazardous', color: 'text-purple-500' }
+  // Temperature color gradient
+  const getTempGradient = (temp) => {
+    if (temp <= 32) return 'from-blue-600 to-cyan-400'
+    if (temp <= 50) return 'from-cyan-500 to-teal-400'
+    if (temp <= 65) return 'from-emerald-500 to-green-400'
+    if (temp <= 75) return 'from-yellow-500 to-amber-400'
+    if (temp <= 85) return 'from-orange-500 to-amber-400'
+    return 'from-red-500 to-orange-400'
   }
 
-  const getUvLabel = (uv) => {
-    if (uv <= 2) return { label: 'Low', color: 'text-green-500' }
-    if (uv <= 5) return { label: 'Moderate', color: 'text-yellow-500' }
-    if (uv <= 7) return { label: 'High', color: 'text-orange-500' }
-    if (uv <= 10) return { label: 'Very High', color: 'text-red-500' }
-    return { label: 'Extreme', color: 'text-purple-500' }
+  const getAqiInfo = (aqi) => {
+    if (!aqi) return { label: '--', bg: 'bg-slate-100 dark:bg-slate-700', text: 'text-slate-500' }
+    if (aqi <= 50) return { label: 'Good', bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' }
+    if (aqi <= 100) return { label: 'Moderate', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' }
+    if (aqi <= 150) return { label: 'Unhealthy*', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' }
+    if (aqi <= 200) return { label: 'Unhealthy', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' }
+    return { label: 'Hazardous', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
   }
 
-  const aqiInfo = getAqiLabel(aqi)
-  const uvInfo = getUvLabel(uvIndex)
+  const getUvInfo = (uv) => {
+    if (uv <= 2) return { label: 'Low', bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' }
+    if (uv <= 5) return { label: 'Moderate', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' }
+    if (uv <= 7) return { label: 'High', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' }
+    if (uv <= 10) return { label: 'Very High', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' }
+    return { label: 'Extreme', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
+  }
 
-  const StatRow = ({ label, value, unit = '', className = '' }) => (
-    <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
-      <span className="text-slate-600 dark:text-slate-400 text-sm">{label}</span>
-      <span className={`font-semibold text-slate-800 dark:text-white ${className}`}>{value}{unit}</span>
-    </div>
-  )
+  const aqiInfo = getAqiInfo(aqi)
+  const uvInfo = getUvInfo(uvIndex)
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
-      <div className="h-[375px] flex flex-col justify-between p-4">
-        <StatRow label="Current" value={currentTemp} unit="°" />
-        <StatRow label="Feels Like" value={feelsLike} unit="°" />
-        <StatRow label="High" value={high} unit="°" className="text-rose-500" />
-        <StatRow label="Low" value={low} unit="°" className="text-blue-500" />
-        <StatRow label="Humidity" value={humidity} unit="%" />
-        <StatRow label="Wind" value={windSpeed} unit=" mph" />
-        <StatRow label="Precip" value={precip} unit="%" />
-        <StatRow label="UV" value={`${Math.round(uvIndex)} ${uvInfo.label}`} className={uvInfo.color} />
-        <StatRow label="AQI" value={aqi ? `${aqi} ${aqiInfo.label}` : '--'} className={aqiInfo.color} />
+      <div className="h-[375px] flex flex-col">
+        {/* Big Temperature Display */}
+        <div className={`bg-gradient-to-br ${getTempGradient(currentTemp)} p-4 text-white`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-5xl font-bold tracking-tight">{currentTemp}°</div>
+              <div className="text-white/80 text-sm mt-1">Feels like {feelsLike}°</div>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4" />
+                <span className="font-bold">{high}°</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-white/80">
+                <TrendingUp className="w-4 h-4 rotate-180" />
+                <span>{low}°</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="flex-1 grid grid-cols-2 gap-px bg-slate-100 dark:bg-slate-700">
+          {/* Humidity */}
+          <div className="bg-white dark:bg-slate-800 p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Droplets className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Humidity</div>
+              <div className="font-bold text-slate-800 dark:text-white">{humidity}%</div>
+            </div>
+          </div>
+
+          {/* Wind */}
+          <div className="bg-white dark:bg-slate-800 p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+              <Wind className="w-5 h-5 text-slate-500" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Wind</div>
+              <div className="font-bold text-slate-800 dark:text-white">{windSpeed} mph</div>
+            </div>
+          </div>
+
+          {/* Precip */}
+          <div className="bg-white dark:bg-slate-800 p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
+              <CloudRain className="w-5 h-5 text-cyan-500" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">Precip</div>
+              <div className="font-bold text-slate-800 dark:text-white">{precip}%</div>
+            </div>
+          </div>
+
+          {/* UV Index */}
+          <div className="bg-white dark:bg-slate-800 p-3 flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full ${uvInfo.bg} flex items-center justify-center`}>
+              <Sun className={`w-5 h-5 ${uvInfo.text}`} />
+            </div>
+            <div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">UV Index</div>
+              <div className={`font-bold ${uvInfo.text}`}>{Math.round(uvIndex)} {uvInfo.label}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* AQI Bar */}
+        <div className={`${aqiInfo.bg} px-4 py-2 flex items-center justify-between`}>
+          <div className="flex items-center gap-2">
+            <Activity className={`w-4 h-4 ${aqiInfo.text}`} />
+            <span className="text-xs text-slate-600 dark:text-slate-400">Air Quality</span>
+          </div>
+          <span className={`font-bold text-sm ${aqiInfo.text}`}>
+            {aqi ? `${aqi} ${aqiInfo.label}` : '--'}
+          </span>
+        </div>
       </div>
     </Card>
   )
@@ -2971,6 +3038,33 @@ export default function App() {
     }
 
     try {
+      // Check if query is a US zip code (5 digits or 5+4 format)
+      const zipMatch = query.match(/^(\d{5})(-\d{4})?$/)
+
+      if (zipMatch) {
+        // Use Zippopotam.us API for zip codes
+        const zipCode = zipMatch[1]
+        const zipRes = await fetch(`https://api.zippopotam.us/us/${zipCode}`)
+        if (zipRes.ok) {
+          const zipData = await zipRes.json()
+          if (zipData.places && zipData.places.length > 0) {
+            const place = zipData.places[0]
+            setSearchResults([{
+              name: place['place name'],
+              admin1: place['state abbreviation'],
+              country: 'United States',
+              latitude: parseFloat(place.latitude),
+              longitude: parseFloat(place.longitude),
+              isZipResult: true,
+              zipCode: zipCode
+            }])
+            setShowResults(true)
+            return
+          }
+        }
+      }
+
+      // Fall back to Open-Meteo for city names
       const res = await fetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`
       )
@@ -3101,25 +3195,29 @@ export default function App() {
               <RefreshCw className={`w-5 h-5 text-slate-500 dark:text-slate-400 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* User Auth */}
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white shadow-md shadow-blue-200 dark:shadow-none">
-                  <LogIn className="w-4 h-4" />
-                  <span className="text-sm font-semibold hidden sm:inline">Sign In</span>
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-9 h-9',
-                  }
-                }}
-                afterSignOutUrl="/"
-              />
-            </SignedIn>
+            {/* User Auth - only show if Clerk is configured */}
+            {import.meta.env.VITE_CLERK_PUBLISHABLE_KEY && (
+              <>
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors text-white shadow-md shadow-blue-200 dark:shadow-none">
+                      <LogIn className="w-4 h-4" />
+                      <span className="text-sm font-semibold hidden sm:inline">Sign In</span>
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: 'w-9 h-9',
+                      }
+                    }}
+                    afterSignOutUrl="/"
+                  />
+                </SignedIn>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -3200,7 +3298,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono">
-          v1.6.0
+          v1.7.0
         </div>
       </footer>
     </div>
