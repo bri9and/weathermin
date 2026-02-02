@@ -1990,7 +1990,7 @@ function CalendarMonth({ dailyForecast }) {
                   key={dayIdx}
                   className={`aspect-square rounded-xl p-1 flex flex-col items-center justify-center text-center transition-colors hover:bg-blue-50 dark:hover:bg-slate-700 ${
                     cell.isToday ? 'bg-blue-500 text-white shadow-md shadow-blue-200 dark:shadow-none' : ''
-                  } ${cell.snow > 0 && !cell.isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  } ${cell.snow > 0 && !cell.isToday ? 'bg-sky-100 dark:bg-sky-900/30 ring-1 ring-sky-300 dark:ring-sky-600' : ''}`}
                 >
                   <div className={`text-[10px] font-medium ${cell.isToday ? 'text-blue-200' : 'text-slate-400'}`}>
                     {cell.month}
@@ -3871,7 +3871,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.5
+          v1.8.6
           <div>EX26</div>
         </div>
       </footer>
