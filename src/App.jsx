@@ -384,34 +384,65 @@ const nwsTextToWmoCode = (text) => {
   return 2
 }
 
-// Calculate daily min/max from NWS hourly data (more accurate than 12-hour periods)
-// Only includes days with at least 18 hours of data to avoid misleading partial-day values
-const calculateDailyFromHourly = (hourlyPeriods) => {
-  const dailyData = new Map()
+// Calculate daily min/max from NWS hourly data using METEOROLOGICAL DAY (6 AM to 6 AM)
+// This matches how weather services like wunderground report daily temps
+const calculateMeteorologicalDay = (hourlyPeriods) => {
+  // Group temps by meteorological day (6 AM to 6 AM next day)
+  // The "date" of a meteorological day is the date of the daytime portion
+  const meteoData = new Map()
 
   for (const period of hourlyPeriods) {
-    const dateStr = period.startTime.split('T')[0]
-    if (!dailyData.has(dateStr)) {
-      dailyData.set(dateStr, { temps: [], forecasts: [] })
+    const dt = new Date(period.startTime)
+    const hour = dt.getHours()
+
+    // Determine which meteorological day this hour belongs to
+    // Hours 0-5 belong to previous day's meteorological day (overnight low)
+    // Hours 6-23 belong to current day's meteorological day
+    let meteoDate = new Date(dt)
+    if (hour < 6) {
+      meteoDate.setDate(meteoDate.getDate() - 1)
     }
-    const day = dailyData.get(dateStr)
+    const dateStr = meteoDate.toISOString().split('T')[0]
+
+    if (!meteoData.has(dateStr)) {
+      meteoData.set(dateStr, {
+        temps: [],
+        dayTemps: [],  // 6 AM to 6 PM for high
+        nightTemps: [], // 6 PM to 6 AM for low
+        forecasts: []
+      })
+    }
+
+    const day = meteoData.get(dateStr)
     day.temps.push(period.temperature)
+
+    // Separate day vs night temps
+    if (hour >= 6 && hour < 18) {
+      day.dayTemps.push(period.temperature)
+    } else {
+      day.nightTemps.push(period.temperature)
+    }
+
     if (period.shortForecast) {
       day.forecasts.push(period.shortForecast)
     }
   }
 
   const result = { time: [], high: [], low: [], code: [] }
-  const sortedDates = Array.from(dailyData.keys()).sort()
+  const sortedDates = Array.from(meteoData.keys()).sort()
 
   for (const dateStr of sortedDates) {
-    const day = dailyData.get(dateStr)
-    // Only include days with at least 18 hours of data for accurate min/max
-    if (day.temps.length >= 18) {
+    const day = meteoData.get(dateStr)
+    // Need at least 12 hours of data for a reasonable estimate
+    if (day.temps.length >= 12) {
       result.time.push(dateStr)
-      result.high.push(Math.max(...day.temps))
-      result.low.push(Math.min(...day.temps))
-      // Use the most common forecast for weather code
+      // High from daytime temps (or all temps if not enough daytime data)
+      const high = day.dayTemps.length >= 6 ? Math.max(...day.dayTemps) : Math.max(...day.temps)
+      // Low from night temps (or all temps if not enough night data)
+      const low = day.nightTemps.length >= 6 ? Math.min(...day.nightTemps) : Math.min(...day.temps)
+      result.high.push(high)
+      result.low.push(low)
+      // Use midday forecast for weather code
       const forecast = day.forecasts[Math.floor(day.forecasts.length / 2)] || 'Partly Cloudy'
       result.code.push(nwsTextToWmoCode(forecast))
     }
@@ -3444,77 +3475,105 @@ export default function App() {
       }
       if (modelRes.ok) setModelData(await modelRes.json())
 
-      // Parse WeatherAPI and GEM data
-      const weatherApiData = seasonalRes.ok ? await seasonalRes.json() : null
+      // Parse GEM and ECMWF data for extended forecast
+      const ecmwfData = seasonalRes.ok ? await seasonalRes.json() : null
       const gemData = gemRes.ok ? await gemRes.json() : null
 
-      // Build daily forecast from WeatherAPI (primary source for temps)
-      if (weatherApiData?.forecast?.forecastday) {
-        const dailyResult = {
-          time: [],
-          weather_code: [],
-          temperature_2m_max: [],
-          temperature_2m_min: [],
-          snowfall_sum: [],
-          precipitation_sum: [],
-          precipitation_probability_max: [],
-          sunrise: [],
-          sunset: [],
-          uv_index_max: [],
-        }
+      // Build daily forecast using METEOROLOGICAL DAY calculation from NWS hourly
+      const dailyResult = {
+        time: [],
+        weather_code: [],
+        temperature_2m_max: [],
+        temperature_2m_min: [],
+        snowfall_sum: [],
+        precipitation_sum: [],
+        precipitation_probability_max: [],
+        sunrise: [],
+        sunset: [],
+        uv_index_max: [],
+      }
 
-        // Map WeatherAPI condition codes to WMO codes
-        const weatherApiToWmo = (code) => {
-          // https://www.weatherapi.com/docs/weather_conditions.json
-          if (code === 1000) return 0 // Clear
-          if (code === 1003) return 1 // Partly cloudy
-          if (code === 1006) return 2 // Cloudy
-          if (code === 1009) return 3 // Overcast
-          if ([1030, 1135, 1147].includes(code)) return 45 // Fog
-          if ([1063, 1180, 1183].includes(code)) return 61 // Light rain
-          if ([1186, 1189].includes(code)) return 63 // Moderate rain
-          if ([1192, 1195, 1243, 1246].includes(code)) return 65 // Heavy rain
-          if ([1066, 1210, 1213].includes(code)) return 71 // Light snow
-          if ([1216, 1219].includes(code)) return 73 // Moderate snow
-          if ([1222, 1225, 1258].includes(code)) return 75 // Heavy snow
-          if ([1069, 1204, 1207, 1249, 1252].includes(code)) return 85 // Sleet
-          if ([1087, 1273, 1276].includes(code)) return 95 // Thunderstorm
-          if ([1114, 1117].includes(code)) return 77 // Blowing snow
-          if ([1150, 1153, 1168, 1171].includes(code)) return 51 // Drizzle
-          if ([1237, 1261, 1264].includes(code)) return 79 // Ice pellets
-          return 2 // Default cloudy
-        }
+      // Calculate meteorological day temps from NWS hourly (days 0-7)
+      if (nwsHourlyData?.properties?.periods) {
+        const meteoDaily = calculateMeteorologicalDay(nwsHourlyData.properties.periods)
 
-        for (const day of weatherApiData.forecast.forecastday) {
-          dailyResult.time.push(day.date)
-          dailyResult.weather_code.push(weatherApiToWmo(day.day.condition?.code || 1003))
-          dailyResult.temperature_2m_max.push(Math.round(day.day.maxtemp_f))
-          dailyResult.temperature_2m_min.push(Math.round(day.day.mintemp_f))
-          dailyResult.precipitation_sum.push(day.day.totalprecip_in || 0)
-          dailyResult.precipitation_probability_max.push(day.day.daily_chance_of_rain || 0)
-          dailyResult.snowfall_sum.push((day.day.totalsnow_cm || 0) / 2.54) // cm to inches
-
-          // Get sunrise/sunset from astro
-          dailyResult.sunrise.push(day.astro?.sunrise || null)
-          dailyResult.sunset.push(day.astro?.sunset || null)
-          dailyResult.uv_index_max.push(day.day.uv || null)
-        }
-
-        // Merge GEM snowfall if higher (GEM often better for snow in Northeast)
-        if (gemData?.daily?.snowfall_sum) {
-          const gemTimes = gemData.daily.time || []
-          for (let i = 0; i < dailyResult.time.length; i++) {
-            const gemIdx = gemTimes.indexOf(dailyResult.time[i])
-            if (gemIdx !== -1) {
-              const gemSnow = gemData.daily.snowfall_sum[gemIdx] || 0
-              dailyResult.snowfall_sum[i] = Math.max(dailyResult.snowfall_sum[i], gemSnow)
+        // Get weather codes from NWS forecast periods
+        const nwsCodesByDate = new Map()
+        if (nwsForecastData?.properties?.periods) {
+          for (const period of nwsForecastData.properties.periods) {
+            if (period.isDaytime) {
+              const dateStr = period.startTime.split('T')[0]
+              nwsCodesByDate.set(dateStr, nwsTextToWmoCode(period.shortForecast))
             }
           }
         }
 
+        for (let i = 0; i < meteoDaily.time.length; i++) {
+          dailyResult.time.push(meteoDaily.time[i])
+          dailyResult.weather_code.push(nwsCodesByDate.get(meteoDaily.time[i]) ?? meteoDaily.code[i] ?? 2)
+          dailyResult.temperature_2m_max.push(meteoDaily.high[i])
+          dailyResult.temperature_2m_min.push(meteoDaily.low[i])
+          dailyResult.precipitation_sum.push(0)
+          dailyResult.precipitation_probability_max.push(0)
+          dailyResult.snowfall_sum.push(0)
+          dailyResult.sunrise.push(null)
+          dailyResult.sunset.push(null)
+          dailyResult.uv_index_max.push(null)
+        }
+      }
+
+      // Add ECMWF data for days beyond NWS coverage (days 8+)
+      const nwsEndDate = dailyResult.time[dailyResult.time.length - 1] || ''
+      if (ecmwfData?.forecast?.forecastday) {
+        // WeatherAPI format (if we kept that fetch)
+        for (const day of ecmwfData.forecast.forecastday) {
+          if (day.date <= nwsEndDate) continue
+          dailyResult.time.push(day.date)
+          dailyResult.weather_code.push(2)
+          dailyResult.temperature_2m_max.push(Math.round(day.day.maxtemp_f))
+          dailyResult.temperature_2m_min.push(Math.round(day.day.mintemp_f))
+          dailyResult.precipitation_sum.push(day.day.totalprecip_in || 0)
+          dailyResult.precipitation_probability_max.push(day.day.daily_chance_of_rain || 0)
+          dailyResult.snowfall_sum.push((day.day.totalsnow_cm || 0) / 2.54)
+          dailyResult.sunrise.push(day.astro?.sunrise || null)
+          dailyResult.sunset.push(day.astro?.sunset || null)
+          dailyResult.uv_index_max.push(day.day.uv || null)
+        }
+      } else if (gemData?.daily?.time) {
+        // GEM format fallback for extended forecast
+        for (let i = 0; i < gemData.daily.time.length; i++) {
+          const dateStr = gemData.daily.time[i]
+          if (dateStr <= nwsEndDate) continue
+          dailyResult.time.push(dateStr)
+          dailyResult.weather_code.push(2)
+          dailyResult.temperature_2m_max.push(Math.round(gemData.daily.temperature_2m_max?.[i] ?? 50))
+          dailyResult.temperature_2m_min.push(Math.round(gemData.daily.temperature_2m_min?.[i] ?? 40))
+          dailyResult.precipitation_sum.push(gemData.daily.precipitation_sum?.[i] ?? 0)
+          dailyResult.precipitation_probability_max.push(0)
+          dailyResult.snowfall_sum.push(gemData.daily.snowfall_sum?.[i] ?? 0)
+          dailyResult.sunrise.push(gemData.daily.sunrise?.[i] ?? null)
+          dailyResult.sunset.push(gemData.daily.sunset?.[i] ?? null)
+          dailyResult.uv_index_max.push(gemData.daily.uv_index_max?.[i] ?? null)
+        }
+      }
+
+      // Merge GEM snowfall if higher (GEM often better for snow in Northeast)
+      if (gemData?.daily?.snowfall_sum) {
+        const gemTimes = gemData.daily.time || []
+        for (let i = 0; i < dailyResult.time.length; i++) {
+          const gemIdx = gemTimes.indexOf(dailyResult.time[i])
+          if (gemIdx !== -1) {
+            const gemSnow = gemData.daily.snowfall_sum[gemIdx] || 0
+            dailyResult.snowfall_sum[i] = Math.max(dailyResult.snowfall_sum[i], gemSnow)
+          }
+        }
+      }
+
+      // Set the daily forecast
+      if (dailyResult.time.length > 0) {
         setDailyForecast({ daily: dailyResult })
       } else if (gemData?.daily) {
-        // Fallback to GEM-only if WeatherAPI fails
+        // Fallback to GEM-only if NWS hourly fails
         setDailyForecast(gemData)
       }
 
