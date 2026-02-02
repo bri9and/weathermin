@@ -96,29 +96,6 @@ const WEATHER_LINKS = {
   ],
 }
 
-const RAW_DATA_SOURCES = {
-  'Forecast APIs': [
-    { name: 'Open-Meteo (GFS/HRRR)', url: 'https://api.open-meteo.com/v1/gfs' },
-    { name: 'Open-Meteo (Canadian GEM)', url: 'https://api.open-meteo.com/v1/gem' },
-    { name: 'NWS API', url: 'https://api.weather.gov' },
-  ],
-  'Radar & Satellite': [
-    { name: 'RainViewer Radar Tiles', url: 'https://api.rainviewer.com/public/weather-maps.json' },
-    { name: 'GOES-East (NOAA)', url: 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR' },
-    { name: 'GOES-West (NOAA)', url: 'https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR' },
-    { name: 'MRMS Radar (NOAA)', url: 'https://mrms.ncep.noaa.gov/data/' },
-  ],
-  'Air Quality & UV': [
-    { name: 'Open-Meteo Air Quality', url: 'https://air-quality-api.open-meteo.com/v1/air-quality' },
-    { name: 'AirNow API', url: 'https://www.airnowapi.org/' },
-    { name: 'EPA AQS Data', url: 'https://aqs.epa.gov/aqsweb/documents/data_api.html' },
-  ],
-  'Alerts & Warnings': [
-    { name: 'NWS Alerts API', url: 'https://api.weather.gov/alerts/active' },
-    { name: 'NWS CAP Feeds', url: 'https://alerts.weather.gov/' },
-  ],
-}
-
 function getWeatherIcon(forecast) {
   const lower = forecast?.toLowerCase() || ''
   if (lower.includes('thunder') || lower.includes('lightning')) return CloudLightning
@@ -3354,36 +3331,6 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
               ))}
             </div>
           </div>
-
-          {/* Raw Data Sources */}
-          <div>
-            <h3 className="text-md font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" />
-              Raw Data Sources (APIs)
-            </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {Object.entries(RAW_DATA_SOURCES).map(([category, sources]) => (
-                <Card key={category}>
-                  <h4 className="text-slate-700 dark:text-slate-200 font-semibold mb-3">{category}</h4>
-                  <div className="space-y-2">
-                    {sources.map((source) => (
-                      <div key={source.url} className="text-sm">
-                        <div className="text-slate-700 dark:text-slate-300 font-medium">{source.name}</div>
-                        <a
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-sky-400 hover:underline break-all text-xs font-mono"
-                        >
-                          {source.url}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
       </div>
     </div>
   )
@@ -3888,7 +3835,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.8
+          v1.8.9
           <div>EX26</div>
         </div>
       </footer>
