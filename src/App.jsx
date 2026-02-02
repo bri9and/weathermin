@@ -1983,7 +1983,7 @@ function CalendarMonth({ dailyForecast }) {
               }
 
               const Icon = getWeatherIconFromCode(cell.weatherCode)
-              const isSnowy = [71, 73, 75, 77, 85, 86].includes(cell.weatherCode)
+              const hasSnow = cell.snow > 0 || [71, 73, 75, 77, 85, 86].includes(cell.weatherCode)
 
               return (
                 <div
@@ -1998,7 +1998,7 @@ function CalendarMonth({ dailyForecast }) {
                   <div className={`text-sm font-bold ${cell.isToday ? 'text-white' : 'text-slate-700 dark:text-slate-300'}`}>
                     {cell.dayNum}
                   </div>
-                  <Icon className={`w-4 h-4 ${cell.isToday ? 'text-white' : isSnowy ? 'text-blue-400' : 'text-amber-400'}`} />
+                  <Icon className={`w-4 h-4 ${cell.isToday ? 'text-white' : hasSnow ? 'text-blue-400' : 'text-amber-400'}`} />
                   <div className="text-[10px] font-semibold">
                     <span className={cell.isToday ? 'text-white' : 'text-slate-700 dark:text-white'}>{cell.high}°</span>
                     <span className={cell.isToday ? 'text-blue-200' : 'text-slate-400'}>/{cell.low}°</span>
@@ -3871,7 +3871,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.6
+          v1.8.7
           <div>EX26</div>
         </div>
       </footer>
