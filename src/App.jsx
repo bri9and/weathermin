@@ -3813,29 +3813,21 @@ export default function App() {
       <footer className="mt-12 pb-8 relative">
         <div className="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-slate-400">
           <p className="mb-2">Made with ☀️ for sunny days and ☔ for rainy ones</p>
-          <p>
-            Data from{' '}
-            <a
-              href="https://www.weather.gov/documentation/services-web-api"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 font-medium"
-            >
-              NWS
-            </a>
-            {' & '}
-            <a
-              href="https://open-meteo.com/en/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 font-medium"
-            >
-              Open-Meteo
-            </a>
+          <p className="space-x-1">
+            <span>Data from</span>
+            <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 font-medium">NWS</a>
+            <span>·</span>
+            <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 font-medium">Open-Meteo</a>
+            <span>·</span>
+            <a href="https://www.weatherapi.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 font-medium">WeatherAPI</a>
+            <span>·</span>
+            <a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 font-medium">RainViewer</a>
+            <span>·</span>
+            <a href="https://www.star.nesdis.noaa.gov/goes" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 font-medium">NOAA GOES</a>
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.9
+          v1.9.0
           <div>EX26</div>
         </div>
       </footer>
