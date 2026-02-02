@@ -354,6 +354,191 @@ const getWeatherIconFromCode = (code) => {
   return Sun
 }
 
+// Map NWS shortForecast text to WMO weather codes
+const nwsTextToWmoCode = (text) => {
+  const lower = text.toLowerCase()
+  // Snow conditions
+  if (lower.includes('blizzard') || lower.includes('heavy snow')) return 75
+  if (lower.includes('snow shower')) return 85
+  if (lower.includes('snow')) return 71
+  if (lower.includes('flurr')) return 77
+  // Rain/precipitation
+  if (lower.includes('thunderstorm') || lower.includes('t-storm')) return 95
+  if (lower.includes('heavy rain') || lower.includes('downpour')) return 65
+  if (lower.includes('rain shower') || lower.includes('showers')) return 80
+  if (lower.includes('drizzle')) return 51
+  if (lower.includes('rain')) return 61
+  if (lower.includes('sleet') || lower.includes('freezing rain')) return 66
+  // Mixed
+  if (lower.includes('wintry mix')) return 66
+  // Fog
+  if (lower.includes('fog')) return 45
+  // Cloud conditions
+  if (lower.includes('overcast') || lower.includes('cloudy')) return 3
+  if (lower.includes('mostly cloudy')) return 3
+  if (lower.includes('partly cloudy') || lower.includes('partly sunny')) return 2
+  if (lower.includes('mostly sunny') || lower.includes('mostly clear')) return 1
+  // Clear
+  if (lower.includes('sunny') || lower.includes('clear')) return 0
+  // Default to partly cloudy
+  return 2
+}
+
+// Calculate daily min/max from NWS hourly data (more accurate than 12-hour periods)
+// Only includes days with at least 18 hours of data to avoid misleading partial-day values
+const calculateDailyFromHourly = (hourlyPeriods) => {
+  const dailyData = new Map()
+
+  for (const period of hourlyPeriods) {
+    const dateStr = period.startTime.split('T')[0]
+    if (!dailyData.has(dateStr)) {
+      dailyData.set(dateStr, { temps: [], forecasts: [] })
+    }
+    const day = dailyData.get(dateStr)
+    day.temps.push(period.temperature)
+    if (period.shortForecast) {
+      day.forecasts.push(period.shortForecast)
+    }
+  }
+
+  const result = { time: [], high: [], low: [], code: [] }
+  const sortedDates = Array.from(dailyData.keys()).sort()
+
+  for (const dateStr of sortedDates) {
+    const day = dailyData.get(dateStr)
+    // Only include days with at least 18 hours of data for accurate min/max
+    if (day.temps.length >= 18) {
+      result.time.push(dateStr)
+      result.high.push(Math.max(...day.temps))
+      result.low.push(Math.min(...day.temps))
+      // Use the most common forecast for weather code
+      const forecast = day.forecasts[Math.floor(day.forecasts.length / 2)] || 'Partly Cloudy'
+      result.code.push(nwsTextToWmoCode(forecast))
+    }
+  }
+
+  return result
+}
+
+// Blend NWS forecast periods with NWS raw gridpoints data and GEM extended forecast
+const blendDailyForecasts = (nwsPeriods, nwsRawTemps, gemDaily, gemSnowfall) => {
+  const result = {
+    time: [],
+    weather_code: [],
+    temperature_2m_max: [],
+    temperature_2m_min: [],
+    snowfall_sum: [],
+    precipitation_sum: [],
+    precipitation_probability_max: [],
+    sunrise: [],
+    sunset: [],
+    uv_index_max: [],
+  }
+
+  // Process NWS 12-hour periods to get daily high/low
+  // NWS periods alternate: daytime (high), overnight (low for next morning)
+  // We pair each daytime period with the FOLLOWING overnight period
+  const nwsDays = []
+  if (nwsPeriods) {
+    for (let i = 0; i < nwsPeriods.length; i++) {
+      const period = nwsPeriods[i]
+      if (period.isDaytime) {
+        const dateStr = period.startTime.split('T')[0]
+        const nextPeriod = nwsPeriods[i + 1]
+        // The overnight low follows this daytime high
+        const low = nextPeriod && !nextPeriod.isDaytime ? nextPeriod.temperature : null
+        nwsDays.push({
+          date: dateStr,
+          high: period.temperature,
+          low: low,
+          code: nwsTextToWmoCode(period.shortForecast),
+          precip: period.probabilityOfPrecipitation?.value || 0,
+          name: period.name
+        })
+      }
+    }
+  }
+
+  // Build a map of GEM data by date for extended forecast
+  const gemByDate = new Map()
+  if (gemDaily?.time) {
+    for (let i = 0; i < gemDaily.time.length; i++) {
+      gemByDate.set(gemDaily.time[i], {
+        high: Math.round(gemDaily.temperature_2m_max?.[i] ?? 50),
+        low: Math.round(gemDaily.temperature_2m_min?.[i] ?? 40),
+        code: gemDaily.weather_code?.[i] ?? 2,
+        precip_prob: gemDaily.precipitation_probability_max?.[i] ?? 0,
+        precip_sum: gemDaily.precipitation_sum?.[i] ?? 0,
+        snowfall: gemDaily.snowfall_sum?.[i] ?? 0,
+        sunrise: gemDaily.sunrise?.[i] ?? null,
+        sunset: gemDaily.sunset?.[i] ?? null,
+        uv: gemDaily.uv_index_max?.[i] ?? null,
+      })
+    }
+  }
+
+  // Use NWS period data, filling missing lows from NWS raw gridpoints data
+  for (const day of nwsDays) {
+    if (day.high !== null) {
+      const gem = gemByDate.get(day.date)
+      const rawNws = nwsRawTemps?.[day.date]
+      result.time.push(day.date)
+      result.weather_code.push(day.code ?? 2)
+      result.temperature_2m_max.push(day.high)
+      // Priority for low: 1) NWS period low, 2) NWS raw gridpoints low, 3) GEM low
+      if (day.low !== null) {
+        result.temperature_2m_min.push(day.low)
+      } else if (rawNws?.low !== undefined) {
+        result.temperature_2m_min.push(rawNws.low)
+      } else {
+        result.temperature_2m_min.push(gem?.low ?? day.high - 15)
+      }
+      result.precipitation_probability_max.push(day.precip ?? 0)
+      result.precipitation_sum.push(0)
+      result.snowfall_sum.push(0)
+      result.sunrise.push(gem?.sunrise ?? null)
+      result.sunset.push(gem?.sunset ?? null)
+      result.uv_index_max.push(gem?.uv ?? null)
+    }
+  }
+
+  // Add GEM data for days beyond NWS coverage
+  const nwsEndDate = result.time[result.time.length - 1] || ''
+  if (gemDaily?.time) {
+    for (let i = 0; i < gemDaily.time.length; i++) {
+      const dateStr = gemDaily.time[i]
+      // Skip dates already covered by NWS
+      if (dateStr <= nwsEndDate) continue
+
+      const gem = gemByDate.get(dateStr)
+      result.time.push(dateStr)
+      result.weather_code.push(gem?.code ?? 2)
+      result.temperature_2m_max.push(gem?.high ?? 50)
+      result.temperature_2m_min.push(gem?.low ?? 40)
+      result.precipitation_probability_max.push(gem?.precip_prob ?? 0)
+      result.precipitation_sum.push(gem?.precip_sum ?? 0)
+      result.snowfall_sum.push(gem?.snowfall ?? 0)
+      result.sunrise.push(gem?.sunrise ?? null)
+      result.sunset.push(gem?.sunset ?? null)
+      result.uv_index_max.push(gem?.uv ?? null)
+    }
+  }
+
+  // Merge GEM snowfall data (use max of GEM vs existing)
+  if (gemSnowfall?.daily?.snowfall_sum) {
+    const gemTimes = gemSnowfall.daily.time || []
+    for (let i = 0; i < result.time.length; i++) {
+      const gemIdx = gemTimes.indexOf(result.time[i])
+      if (gemIdx !== -1) {
+        const gemSnow = gemSnowfall.daily.snowfall_sum[gemIdx] || 0
+        result.snowfall_sum[i] = Math.max(result.snowfall_sum[i], gemSnow)
+      }
+    }
+  }
+
+  return { daily: result }
+}
+
 // AQI level descriptions and colors
 const getAqiLevel = (aqi) => {
   if (aqi <= 50) return { label: 'Good', color: 'text-emerald-400', bg: 'bg-emerald-500/20' }
@@ -601,7 +786,6 @@ function MiniRadar({ location }) {
   const [radarFrames, setRadarFrames] = useState([])
   const [currentFrame, setCurrentFrame] = useState(0)
   const [zoomComplete, setZoomComplete] = useState(false)
-  const isDark = useColorScheme()
   const center = useMemo(() => [location.lat, location.lon], [location.lat, location.lon])
   const handleZoomComplete = useCallback(() => setZoomComplete(true), [])
 
@@ -694,7 +878,7 @@ function MiniRadar({ location }) {
           center={center}
           zoom={3}
           className="h-full w-full"
-          style={{ background: isDark ? '#1e293b' : '#f1f5f9' }}
+          style={{ background: '#f1f5f9' }}
           zoomControl={true}
           attributionControl={false}
           dragging={true}
@@ -712,27 +896,27 @@ function MiniRadar({ location }) {
             endZoom={8}
             onZoomComplete={handleZoomComplete}
           />
-          <TileLayer url={isDark ? MAP_TILES.dark : MAP_TILES.light} />
+          <TileLayer url={MAP_TILES.light} />
           {currentRadarUrl && <TileLayer url={currentRadarUrl} opacity={0.7} />}
         </MapContainer>
         {/* Title overlay */}
-        <div className={`absolute top-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 ${isDark ? 'bg-slate-900/80 text-white' : 'bg-white/90 text-slate-800 shadow-sm'}`}>
+        <div className="absolute top-3 right-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm font-medium z-10 bg-white/90 text-slate-800 shadow-sm">
           Live Radar
         </div>
         {/* Time indicator */}
-        <div className={`absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 ${isDark ? 'bg-slate-900/80 text-slate-300' : 'bg-white/90 text-slate-600 shadow-sm'}`}>
+        <div className="absolute bottom-3 left-3 backdrop-blur-sm px-3 py-1.5 rounded-lg text-sm z-10 flex items-center gap-2 bg-white/90 text-slate-600 shadow-sm">
           <span className={`w-2 h-2 rounded-full ${zoomComplete ? 'bg-red-500 animate-pulse' : 'bg-sky-500 animate-ping'}`}></span>
           {zoomComplete ? (
             <>
               {frameTime}
-              {timeRange && <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>({timeRange})</span>}
+              {timeRange && <span className="text-slate-400">({timeRange})</span>}
             </>
           ) : (
             <span className="text-sky-500">Zooming in...</span>
           )}
         </div>
         {/* Progress bar */}
-        <div className={`absolute bottom-0 left-0 right-0 h-1.5 z-10 ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 z-10 bg-slate-200">
           <div
             className="h-full bg-sky-500 transition-all duration-300"
             style={{ width: `${((currentFrame + 1) / radarFrames.length) * 100}%` }}
@@ -964,7 +1148,32 @@ function SatelliteLoop({ location }) {
 }
 
 // Quick Stats Panel - engaging weather dashboard
-function QuickStats({ modelData, dailyForecast, airQuality, location }) {
+// Get clothing recommendations based on feels-like temperature
+const getClothingRecommendation = (feelsLike) => {
+  if (feelsLike <= 10) {
+    return { grab: 'heavy winter coat, hat & gloves, layers', tip: 'dress very warmly' }
+  } else if (feelsLike <= 20) {
+    return { grab: 'heavy winter coat, hat & gloves', tip: 'dress warmly' }
+  } else if (feelsLike <= 32) {
+    return { grab: 'winter coat, hat, gloves', tip: 'bundle up' }
+  } else if (feelsLike <= 45) {
+    return { grab: 'warm jacket, light layers', tip: 'layer up' }
+  } else if (feelsLike <= 55) {
+    return { grab: 'light jacket or sweater', tip: 'bring a layer' }
+  } else if (feelsLike <= 65) {
+    return { grab: 'light layers optional', tip: 'comfortable weather' }
+  } else if (feelsLike <= 75) {
+    return { grab: 'light clothing', tip: 'nice day' }
+  } else if (feelsLike <= 85) {
+    return { grab: 'light, breathable clothing', tip: 'stay cool' }
+  } else if (feelsLike <= 95) {
+    return { grab: 'minimal light clothing, sunscreen', tip: 'stay hydrated' }
+  } else {
+    return { grab: 'minimal clothing, water, sunscreen', tip: 'limit outdoor time' }
+  }
+}
+
+function QuickStats({ modelData, dailyForecast, location }) {
   const isDark = useColorScheme()
 
   if (!modelData?.current || !dailyForecast?.daily) return null
@@ -981,7 +1190,7 @@ function QuickStats({ modelData, dailyForecast, airQuality, location }) {
   const windSpeed = Math.round(current.wind_speed_10m)
   const precip = daily.precipitation_probability_max[0]
   const uvIndex = today?.uv_index || 0
-  const aqi = airQuality?.current?.us_aqi
+  const clothing = getClothingRecommendation(feelsLike)
 
   // Temperature color gradient
   const getTempGradient = (temp) => {
@@ -993,15 +1202,6 @@ function QuickStats({ modelData, dailyForecast, airQuality, location }) {
     return 'from-red-500 to-orange-400'
   }
 
-  const getAqiInfo = (aqi) => {
-    if (!aqi) return { label: '--', bg: 'bg-slate-100 dark:bg-slate-700', text: 'text-slate-500' }
-    if (aqi <= 50) return { label: 'Good', bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' }
-    if (aqi <= 100) return { label: 'Moderate', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' }
-    if (aqi <= 150) return { label: 'Unhealthy*', bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400' }
-    if (aqi <= 200) return { label: 'Unhealthy', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' }
-    return { label: 'Hazardous', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
-  }
-
   const getUvInfo = (uv) => {
     if (uv <= 2) return { label: 'Low', bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' }
     if (uv <= 5) return { label: 'Moderate', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400' }
@@ -1010,12 +1210,11 @@ function QuickStats({ modelData, dailyForecast, airQuality, location }) {
     return { label: 'Extreme', bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
   }
 
-  const aqiInfo = getAqiInfo(aqi)
   const uvInfo = getUvInfo(uvIndex)
 
   return (
     <Card className="p-0 overflow-hidden rounded-xl">
-      <div className="h-[375px] flex flex-col">
+      <div className="flex flex-col">
         {/* Big Temperature Display */}
         <div className={`bg-gradient-to-br ${getTempGradient(currentTemp)} p-4 text-white`}>
           {/* Location */}
@@ -1026,7 +1225,7 @@ function QuickStats({ modelData, dailyForecast, airQuality, location }) {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-5xl font-bold tracking-tight">{currentTemp}°</div>
-              <div className="text-white/80 text-sm mt-1">Feels like {feelsLike}°</div>
+              <div className="text-white/80 text-sm mt-1">Feels like {feelsLike}° - {clothing.tip}</div>
             </div>
             <div className="text-right">
               <div className="flex items-center gap-2 text-sm">
@@ -1086,17 +1285,6 @@ function QuickStats({ modelData, dailyForecast, airQuality, location }) {
               <div className={`font-bold ${uvInfo.text}`}>{Math.round(uvIndex)} {uvInfo.label}</div>
             </div>
           </div>
-        </div>
-
-        {/* AQI Bar */}
-        <div className={`${aqiInfo.bg} px-4 py-2 flex items-center justify-between`}>
-          <div className="flex items-center gap-2">
-            <Activity className={`w-4 h-4 ${aqiInfo.text}`} />
-            <span className="text-xs text-slate-600 dark:text-slate-400">Air Quality</span>
-          </div>
-          <span className={`font-bold text-sm ${aqiInfo.text}`}>
-            {aqi ? `${aqi} ${aqiInfo.label}` : '--'}
-          </span>
         </div>
       </div>
     </Card>
@@ -1681,9 +1869,9 @@ function CalendarMonth({ dailyForecast }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Create forecast data array with dates
+  // Create forecast data array with dates (limit to 16 days - ECMWF max)
   const forecastDays = useMemo(() => {
-    return daily.time.map((dateStr, i) => {
+    return daily.time.slice(0, 16).map((dateStr, i) => {
       const date = new Date(dateStr + 'T00:00:00')
       return {
         date,
@@ -3194,10 +3382,14 @@ export default function App() {
       const noCacheOpts = { cache: 'no-store' }
       const nwsOpts = { headers: { 'User-Agent': 'WeatherDashboard/1.0' }, cache: 'no-store' }
 
-      const [forecastRes, hourlyRes, alertsRes, modelRes, dailyRes, gemRes, aqiRes] = await Promise.all([
+      // NWS gridpoints URL for raw min/max temperature data
+      const gridpointsUrl = `https://api.weather.gov/gridpoints/${gridId}/${gridX},${gridY}`
+
+      const [forecastRes, hourlyRes, alertsRes, gridpointsRes, modelRes, seasonalRes, gemRes, aqiRes] = await Promise.all([
         fetch(forecastUrl, nwsOpts),
         fetch(hourlyUrl, nwsOpts),
-        fetch(`https://api.weather.gov/alerts/active?area=${loc.state}`, nwsOpts),
+        fetch(`https://api.weather.gov/alerts/active?point=${loc.lat},${loc.lon}`, nwsOpts),
+        fetch(gridpointsUrl, nwsOpts),
         fetch(
           `https://api.open-meteo.com/v1/gfs?latitude=${loc.lat}&longitude=${loc.lon}` +
             `&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,` +
@@ -3208,23 +3400,16 @@ export default function App() {
             cacheBust,
           noCacheOpts
         ),
-        // Daily forecast from Open-Meteo GFS model
+        // WeatherAPI.com for accurate daily forecasts (14 days)
         fetch(
-          `https://api.open-meteo.com/v1/gfs?latitude=${loc.lat}&longitude=${loc.lon}` +
-            `&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,` +
-            `apparent_temperature_min,precipitation_sum,precipitation_probability_max,` +
-            `snowfall_sum,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,` +
-            `uv_index_max,sunrise,sunset` +
-            `&current=uv_index,visibility,dew_point_2m` +
-            `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch` +
-            `&timezone=America/New_York&forecast_days=16` +
-            cacheBust,
+          `https://api.weatherapi.com/v1/forecast.json?key=${import.meta.env.VITE_WEATHERAPI_KEY}` +
+            `&q=${loc.lat},${loc.lon}&days=14`,
           noCacheOpts
         ),
-        // Canadian GEM model for snow comparison (often higher for Northeast US)
+        // Canadian GEM model for snowfall data
         fetch(
           `https://api.open-meteo.com/v1/gem?latitude=${loc.lat}&longitude=${loc.lon}` +
-            `&daily=snowfall_sum` +
+            `&daily=snowfall_sum,sunrise,sunset,uv_index_max` +
             `&timezone=America/New_York&forecast_days=16` +
             cacheBust,
           noCacheOpts
@@ -3239,27 +3424,100 @@ export default function App() {
         ),
       ])
 
-      if (forecastRes.ok) setForecast(await forecastRes.json())
-      if (hourlyRes.ok) setHourlyForecast(await hourlyRes.json())
+      let nwsForecastData = null
+      let nwsHourlyData = null
+      let nwsGridpointsData = null
+      if (forecastRes.ok) {
+        nwsForecastData = await forecastRes.json()
+        setForecast(nwsForecastData)
+      }
+      if (hourlyRes.ok) {
+        nwsHourlyData = await hourlyRes.json()
+        setHourlyForecast(nwsHourlyData)
+      }
+      if (gridpointsRes.ok) {
+        nwsGridpointsData = await gridpointsRes.json()
+      }
       if (alertsRes.ok) {
         const alertsData = await alertsRes.json()
         setAlerts(alertsData.features || [])
       }
       if (modelRes.ok) setModelData(await modelRes.json())
 
-      // Merge GFS and Canadian GEM snow data - use higher values
-      if (dailyRes.ok) {
-        const gfsDaily = await dailyRes.json()
-        if (gemRes.ok) {
-          const gemDaily = await gemRes.json()
-          if (gemDaily.daily?.snowfall_sum && gfsDaily.daily?.snowfall_sum) {
-            gfsDaily.daily.snowfall_sum = gfsDaily.daily.snowfall_sum.map((gfs, i) =>
-              Math.max(gfs, gemDaily.daily.snowfall_sum[i] || 0)
-            )
+      // Parse WeatherAPI and GEM data
+      const weatherApiData = seasonalRes.ok ? await seasonalRes.json() : null
+      const gemData = gemRes.ok ? await gemRes.json() : null
+
+      // Build daily forecast from WeatherAPI (primary source for temps)
+      if (weatherApiData?.forecast?.forecastday) {
+        const dailyResult = {
+          time: [],
+          weather_code: [],
+          temperature_2m_max: [],
+          temperature_2m_min: [],
+          snowfall_sum: [],
+          precipitation_sum: [],
+          precipitation_probability_max: [],
+          sunrise: [],
+          sunset: [],
+          uv_index_max: [],
+        }
+
+        // Map WeatherAPI condition codes to WMO codes
+        const weatherApiToWmo = (code) => {
+          // https://www.weatherapi.com/docs/weather_conditions.json
+          if (code === 1000) return 0 // Clear
+          if (code === 1003) return 1 // Partly cloudy
+          if (code === 1006) return 2 // Cloudy
+          if (code === 1009) return 3 // Overcast
+          if ([1030, 1135, 1147].includes(code)) return 45 // Fog
+          if ([1063, 1180, 1183].includes(code)) return 61 // Light rain
+          if ([1186, 1189].includes(code)) return 63 // Moderate rain
+          if ([1192, 1195, 1243, 1246].includes(code)) return 65 // Heavy rain
+          if ([1066, 1210, 1213].includes(code)) return 71 // Light snow
+          if ([1216, 1219].includes(code)) return 73 // Moderate snow
+          if ([1222, 1225, 1258].includes(code)) return 75 // Heavy snow
+          if ([1069, 1204, 1207, 1249, 1252].includes(code)) return 85 // Sleet
+          if ([1087, 1273, 1276].includes(code)) return 95 // Thunderstorm
+          if ([1114, 1117].includes(code)) return 77 // Blowing snow
+          if ([1150, 1153, 1168, 1171].includes(code)) return 51 // Drizzle
+          if ([1237, 1261, 1264].includes(code)) return 79 // Ice pellets
+          return 2 // Default cloudy
+        }
+
+        for (const day of weatherApiData.forecast.forecastday) {
+          dailyResult.time.push(day.date)
+          dailyResult.weather_code.push(weatherApiToWmo(day.day.condition?.code || 1003))
+          dailyResult.temperature_2m_max.push(Math.round(day.day.maxtemp_f))
+          dailyResult.temperature_2m_min.push(Math.round(day.day.mintemp_f))
+          dailyResult.precipitation_sum.push(day.day.totalprecip_in || 0)
+          dailyResult.precipitation_probability_max.push(day.day.daily_chance_of_rain || 0)
+          dailyResult.snowfall_sum.push((day.day.totalsnow_cm || 0) / 2.54) // cm to inches
+
+          // Get sunrise/sunset from astro
+          dailyResult.sunrise.push(day.astro?.sunrise || null)
+          dailyResult.sunset.push(day.astro?.sunset || null)
+          dailyResult.uv_index_max.push(day.day.uv || null)
+        }
+
+        // Merge GEM snowfall if higher (GEM often better for snow in Northeast)
+        if (gemData?.daily?.snowfall_sum) {
+          const gemTimes = gemData.daily.time || []
+          for (let i = 0; i < dailyResult.time.length; i++) {
+            const gemIdx = gemTimes.indexOf(dailyResult.time[i])
+            if (gemIdx !== -1) {
+              const gemSnow = gemData.daily.snowfall_sum[gemIdx] || 0
+              dailyResult.snowfall_sum[i] = Math.max(dailyResult.snowfall_sum[i], gemSnow)
+            }
           }
         }
-        setDailyForecast(gfsDaily)
+
+        setDailyForecast({ daily: dailyResult })
+      } else if (gemData?.daily) {
+        // Fallback to GEM-only if WeatherAPI fails
+        setDailyForecast(gemData)
       }
+
       if (aqiRes.ok) setAirQuality(await aqiRes.json())
     } catch (err) {
       console.error('Error fetching weather data:', err)
@@ -3485,34 +3743,26 @@ export default function App() {
 
         {/* Quick Stats at top */}
         <div className="mb-4">
-          <QuickStats modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} location={location} />
+          <QuickStats modelData={modelData} dailyForecast={dailyForecast} location={location} />
         </div>
 
-        {/* Weather Brief - Tips and warnings */}
-        <WeatherBrief modelData={modelData} dailyForecast={dailyForecast} airQuality={airQuality} location={location} />
+        {/* Air Quality */}
+        <AirQualityCard airQuality={airQuality} />
 
         {/* Weather Alerts */}
         <AlertBanner alerts={alerts} />
+
+        {/* Hourly Forecast Strip (Next 24 Hours) */}
+        <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
         {/* Radar */}
         <div className="mb-6">
           <MiniRadar location={location} />
         </div>
 
-        {/* Satellite Loop */}
+        {/* Satellite Loop (NOAA) */}
         <div className="mb-6">
           <SatelliteLoop location={location} />
-        </div>
-
-        {/* Air Quality */}
-        <AirQualityCard airQuality={airQuality} />
-
-        {/* Hourly Forecast Strip */}
-        <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
-
-        {/* Storm Model Comparison */}
-        <div className="mb-6">
-          <StormModelComparison location={location} />
         </div>
 
         {/* 10-Day Forecast Strip */}
@@ -3520,6 +3770,11 @@ export default function App() {
 
         {/* Calendar Month View */}
         {dailyForecast && <CalendarMonth dailyForecast={dailyForecast} />}
+
+        {/* Storm Model Comparison */}
+        <div className="mb-6">
+          <StormModelComparison location={location} />
+        </div>
 
         {/* Data Sources */}
         <DataSourcesPage
