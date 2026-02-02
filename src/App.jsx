@@ -1904,6 +1904,11 @@ function CalendarMonth({ dailyForecast }) {
   const forecastDays = useMemo(() => {
     return daily.time.slice(0, 16).map((dateStr, i) => {
       const date = new Date(dateStr + 'T00:00:00')
+      const snowCm = daily.snowfall_sum[i] || 0
+      const snowIn = snowCm / 2.54
+      const precipMm = daily.precipitation_sum?.[i] || 0
+      const precipIn = precipMm / 25.4
+      const precipProb = daily.precipitation_probability_max?.[i] || 0
       return {
         date,
         dateStr,
@@ -1914,7 +1919,9 @@ function CalendarMonth({ dailyForecast }) {
         weatherCode: daily.weather_code[i],
         high: Math.round(daily.temperature_2m_max[i]),
         low: Math.round(daily.temperature_2m_min[i]),
-        snow: daily.snowfall_sum[i] / 2.54,
+        snow: snowIn,
+        rain: precipIn > snowIn ? precipIn - snowIn : 0, // rain is precip minus snow
+        precipProb,
       }
     })
   }, [daily, today])
@@ -1983,25 +1990,35 @@ function CalendarMonth({ dailyForecast }) {
               }
 
               const Icon = getWeatherIconFromCode(cell.weatherCode)
-              const hasSnow = cell.snow > 0 || [71, 73, 75, 77, 85, 86].includes(cell.weatherCode)
+              const isSnowy = [71, 73, 75, 77, 85, 86].includes(cell.weatherCode)
+              const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(cell.weatherCode)
 
               return (
                 <div
                   key={dayIdx}
-                  className={`aspect-square rounded-xl p-1 flex flex-col items-center justify-center text-center transition-colors hover:bg-blue-50 dark:hover:bg-slate-700 ${
+                  className={`aspect-square rounded-xl p-0.5 flex flex-col items-center justify-center text-center transition-colors hover:bg-blue-50 dark:hover:bg-slate-700 ${
                     cell.isToday ? 'bg-blue-500 text-white shadow-md shadow-blue-200 dark:shadow-none' : ''
-                  } ${cell.snow > 0 && !cell.isToday ? 'bg-sky-100 dark:bg-sky-900/30 ring-1 ring-sky-300 dark:ring-sky-600' : ''}`}
+                  }`}
                 >
-                  <div className={`text-[10px] font-medium ${cell.isToday ? 'text-blue-200' : 'text-slate-400'}`}>
-                    {cell.month}
+                  <div className={`text-[9px] font-medium ${cell.isToday ? 'text-blue-200' : 'text-slate-400'}`}>
+                    {cell.month} {cell.dayNum}
                   </div>
-                  <div className={`text-sm font-bold ${cell.isToday ? 'text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                    {cell.dayNum}
-                  </div>
-                  <Icon className={`w-4 h-4 ${cell.isToday ? 'text-white' : hasSnow ? 'text-blue-400' : 'text-amber-400'}`} />
+                  <Icon className={`w-4 h-4 ${cell.isToday ? 'text-white' : isSnowy ? 'text-blue-400' : isRainy ? 'text-blue-400' : 'text-amber-400'}`} />
                   <div className="text-[10px] font-semibold">
                     <span className={cell.isToday ? 'text-white' : 'text-slate-700 dark:text-white'}>{cell.high}°</span>
                     <span className={cell.isToday ? 'text-blue-200' : 'text-slate-400'}>/{cell.low}°</span>
+                  </div>
+                  {/* Precipitation info */}
+                  <div className="text-[8px] leading-tight">
+                    {cell.precipProb > 0 && (
+                      <span className={cell.isToday ? 'text-blue-200' : 'text-slate-400'}>{cell.precipProb}%</span>
+                    )}
+                    {cell.snow > 0.05 && (
+                      <span className={cell.isToday ? 'text-white' : 'text-sky-500'}> {cell.snow.toFixed(1)}"s</span>
+                    )}
+                    {cell.rain > 0.05 && (
+                      <span className={cell.isToday ? 'text-white' : 'text-blue-500'}> {cell.rain.toFixed(1)}"r</span>
+                    )}
                   </div>
                 </div>
               )
@@ -3871,7 +3888,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.7
+          v1.8.8
           <div>EX26</div>
         </div>
       </footer>
