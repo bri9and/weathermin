@@ -3814,14 +3814,14 @@ export default function App() {
         {/* Hourly Forecast Strip (Next 24 Hours) */}
         <HourlyStrip modelData={modelData} dailyForecast={dailyForecast} />
 
-        {/* Radar */}
-        <div className="mb-6">
-          <MiniRadar location={location} />
-        </div>
-
         {/* Satellite Loop (NOAA) */}
         <div className="mb-6">
           <SatelliteLoop location={location} />
+        </div>
+
+        {/* Radar */}
+        <div className="mb-6">
+          <MiniRadar location={location} />
         </div>
 
         {/* 10-Day Forecast Strip */}
@@ -3871,7 +3871,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.8.4
+          v1.8.5
           <div>EX26</div>
         </div>
       </footer>
