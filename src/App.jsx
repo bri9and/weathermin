@@ -2895,6 +2895,23 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
         statuses['air-quality'] = res.ok ? 'online' : 'offline'
       } catch { statuses['air-quality'] = 'offline' }
 
+      // Check WeatherAPI
+      try {
+        const key = import.meta.env.VITE_WEATHERAPI_KEY
+        if (key) {
+          const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${key}&q=40,-80`, { method: 'HEAD' })
+          statuses['weatherapi'] = res.ok ? 'online' : 'offline'
+        } else {
+          statuses['weatherapi'] = 'offline'
+        }
+      } catch { statuses['weatherapi'] = 'offline' }
+
+      // Check NOAA GOES
+      try {
+        const res = await fetch('https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/NE/GEOCOLOR/latest.jpg', { method: 'HEAD' })
+        statuses['noaa-goes'] = res.ok ? 'online' : 'offline'
+      } catch { statuses['noaa-goes'] = 'offline' }
+
       setApiStatuses(statuses)
     }
 
@@ -3263,12 +3280,14 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
               <Activity className="w-4 h-4 text-emerald-500" />
               API Status
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {[
+                { id: 'nws', name: 'NWS', icon: Cloud },
                 { id: 'open-meteo-gfs', name: 'Open-Meteo GFS', icon: Thermometer },
                 { id: 'open-meteo-gem', name: 'Open-Meteo GEM', icon: Thermometer },
-                { id: 'nws', name: 'NWS API', icon: Cloud },
+                { id: 'weatherapi', name: 'WeatherAPI', icon: Thermometer },
                 { id: 'rainviewer', name: 'RainViewer', icon: CloudRain },
+                { id: 'noaa-goes', name: 'NOAA GOES', icon: Sun },
                 { id: 'air-quality', name: 'Air Quality', icon: Wind },
               ].map(api => {
                 const Icon = api.icon
@@ -3827,7 +3846,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.9.0
+          v1.9.1
           <div>EX26</div>
         </div>
       </footer>
