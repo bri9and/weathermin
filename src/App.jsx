@@ -3491,17 +3491,32 @@ export default function App() {
           }
         }
 
+        // Build WeatherAPI lookup for precip data (their precip is reliable even if temps use different boundaries)
+        const weatherApiByDate = new Map()
+        if (ecmwfData?.forecast?.forecastday) {
+          for (const day of ecmwfData.forecast.forecastday) {
+            weatherApiByDate.set(day.date, day)
+          }
+        }
+
+        console.log('[Weather] Using NWS meteorological day temps for', meteoDaily.time.length, 'days')
         for (let i = 0; i < meteoDaily.time.length; i++) {
-          dailyResult.time.push(meteoDaily.time[i])
-          dailyResult.weather_code.push(nwsCodesByDate.get(meteoDaily.time[i]) ?? meteoDaily.code[i] ?? 2)
+          const dateStr = meteoDaily.time[i]
+          const waDay = weatherApiByDate.get(dateStr)
+          dailyResult.time.push(dateStr)
+          dailyResult.weather_code.push(nwsCodesByDate.get(dateStr) ?? meteoDaily.code[i] ?? 2)
           dailyResult.temperature_2m_max.push(meteoDaily.high[i])
           dailyResult.temperature_2m_min.push(meteoDaily.low[i])
-          dailyResult.precipitation_sum.push(0)
-          dailyResult.precipitation_probability_max.push(0)
-          dailyResult.snowfall_sum.push(0)
-          dailyResult.sunrise.push(null)
-          dailyResult.sunset.push(null)
-          dailyResult.uv_index_max.push(null)
+          // Use WeatherAPI precip data (more reliable than hardcoding 0)
+          dailyResult.precipitation_sum.push(waDay?.day?.totalprecip_in || 0)
+          dailyResult.precipitation_probability_max.push(waDay?.day?.daily_chance_of_rain || waDay?.day?.daily_chance_of_snow || 0)
+          dailyResult.snowfall_sum.push(waDay?.day?.totalsnow_cm ? waDay.day.totalsnow_cm : 0)
+          dailyResult.sunrise.push(waDay?.astro?.sunrise || null)
+          dailyResult.sunset.push(waDay?.astro?.sunset || null)
+          dailyResult.uv_index_max.push(waDay?.day?.uv || null)
+          if (i === 0) {
+            console.log('[Weather] Day 1:', dateStr, 'High:', meteoDaily.high[i], 'Low:', meteoDaily.low[i], 'Precip:', waDay?.day?.daily_chance_of_rain || 0, '%')
+          }
         }
       }
 
@@ -3554,9 +3569,11 @@ export default function App() {
 
       // Set the daily forecast
       if (dailyResult.time.length > 0) {
+        console.log('[Weather] Daily forecast set with', dailyResult.time.length, 'days. First day:', dailyResult.time[0], dailyResult.temperature_2m_max[0] + '/' + dailyResult.temperature_2m_min[0])
         setDailyForecast({ daily: dailyResult })
       } else if (gemData?.daily) {
         // Fallback to GEM-only if NWS hourly fails
+        console.warn('[Weather] FALLBACK: Using GEM data instead of NWS - temps may differ from weather.gov')
         setDailyForecast(gemData)
       }
 
@@ -3846,7 +3863,7 @@ export default function App() {
           </p>
         </div>
         <div className="fixed bottom-3 right-3 text-xs text-slate-300 dark:text-slate-600 font-mono text-right">
-          v1.9.1
+          v1.9.2
           <div>EX26</div>
         </div>
       </footer>
