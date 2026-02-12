@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# iOS / Capacitor
+ios/App/App/public
+ios/App/Pods
+ios/App/DerivedData
+*.xcuserstate
+*.xcuserdatad

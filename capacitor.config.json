@@ -1,0 +1,5 @@
+{
+  "appId": "org.weathermin.app",
+  "appName": "WeatherMin",
+  "webDir": "dist"
+}

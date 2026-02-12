@@ -3595,6 +3595,47 @@ export default function App() {
     return () => clearInterval(interval)
   }, [location, fetchWeatherData])
 
+  // Auto-detect location on initial load
+  useEffect(() => {
+    if (!navigator.geolocation) return
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+        try {
+          const reverseRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          )
+          const reverseData = await reverseRes.json()
+          const name = reverseData.address?.city ||
+                       reverseData.address?.town ||
+                       reverseData.address?.village ||
+                       reverseData.address?.county ||
+                       'Current Location'
+          const state = reverseData.address?.state || reverseData.address?.country || ''
+
+          setLocation({
+            name: `${name}, ${state}`,
+            lat: latitude,
+            lon: longitude,
+            state: reverseData.address?.['ISO3166-2-lvl4']?.split('-')[1] || state,
+          })
+        } catch {
+          setLocation({
+            name: 'Current Location',
+            lat: latitude,
+            lon: longitude,
+            state: '',
+          })
+        }
+      },
+      () => {
+        // User denied or error - keep default location
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [])
+
   const handleSearch = async (query) => {
     if (query.length < 2) {
       setSearchResults([])
