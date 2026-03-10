@@ -73,7 +73,7 @@ weather-dashboard/
    - Air Quality: `air-quality-api.open-meteo.com/v1/air-quality`
    - Geocoding: `geocoding-api.open-meteo.com/v1/search`
 
-3. **WeatherAPI.com** (requires `VITE_WEATHERAPI_KEY`)
+3. **WeatherAPI.com** (requires `WEATHERAPI_KEY` — server-side only, proxied via `/api/weather`)
    - 14-day forecast: `api.weatherapi.com/v1/forecast.json`
 
 4. **Other Services**
@@ -89,8 +89,8 @@ The app uses "meteorological day" calculation (6 AM to 6 AM) for daily high/low 
 
 ## Environment Variables
 ```
-VITE_CLERK_PUBLISHABLE_KEY  # Optional - Clerk auth
-VITE_WEATHERAPI_KEY         # Required - WeatherAPI.com API key
+VITE_CLERK_PUBLISHABLE_KEY  # Optional - Clerk auth (client-side, safe to expose)
+WEATHERAPI_KEY              # Required - WeatherAPI.com API key (server-side only)
 ```
 
 ## Development Commands

@@ -2895,15 +2895,10 @@ function DataSourcesPage({ location, modelData, dailyForecast, airQuality, alert
         statuses['air-quality'] = res.ok ? 'online' : 'offline'
       } catch { statuses['air-quality'] = 'offline' }
 
-      // Check WeatherAPI
+      // Check WeatherAPI (via server-side proxy)
       try {
-        const key = import.meta.env.VITE_WEATHERAPI_KEY
-        if (key) {
-          const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${key}&q=40,-80`, { method: 'HEAD' })
-          statuses['weatherapi'] = res.ok ? 'online' : 'offline'
-        } else {
-          statuses['weatherapi'] = 'offline'
-        }
+        const res = await fetch(`/api/weather?endpoint=current.json&q=40,-80`, { method: 'HEAD' })
+        statuses['weatherapi'] = res.ok ? 'online' : 'offline'
       } catch { statuses['weatherapi'] = 'offline' }
 
       // Check NOAA GOES
@@ -3414,10 +3409,9 @@ export default function App() {
             cacheBust,
           noCacheOpts
         ),
-        // WeatherAPI.com for accurate daily forecasts (14 days)
+        // WeatherAPI.com for accurate daily forecasts (14 days) — via server-side proxy
         fetch(
-          `https://api.weatherapi.com/v1/forecast.json?key=${import.meta.env.VITE_WEATHERAPI_KEY}` +
-            `&q=${loc.lat},${loc.lon}&days=14`,
+          `/api/weather?endpoint=forecast.json&q=${loc.lat},${loc.lon}&days=14`,
           noCacheOpts
         ),
         // Canadian GEM model for snowfall data
