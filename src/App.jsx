@@ -3740,6 +3740,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen overflow-x-hidden">
+      <span style={{ position: 'fixed', top: 8, right: 12, fontSize: 11, color: 'rgba(100,116,139,0.4)', zIndex: 9999, fontFamily: 'monospace', pointerEvents: 'none' }}>v2.0</span>
       {/* Fixed Header */}
       <header
         className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm"
