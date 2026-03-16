@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+.env.local
+.env*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -23,7 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
-.env*.local
 
 # iOS / Capacitor
 ios/App/App/public
